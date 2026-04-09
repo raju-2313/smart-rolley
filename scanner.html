@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet" />
+
+<style>
+
+body{
+ background:black;
+ color:white;
+ text-align:center;
+ font-family:Arial;
+}
+
+video{
+ width:100%;
+ max-width:400px;
+ border:3px solid #00ff99;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>Scanner Running</h2>
+
+<video id="video"></video>
+
+<h3 id="status">Waiting for barcode...</h3>
+
+<script>
+
+const supabaseUrl = "https://nqjuqjrafhurzkudqcbn.supabase.co";
+const supabaseKey = "sb_publishable_v6cpkfut0eEAlapT0g5Ojw_3ZVa-U8u";
+
+const supabaseClient = window.supabase.createClient(supabaseUrl,supabaseKey);
+
+const codeReader = new ZXing.BrowserMultiFormatReader();
+
+const video = document.getElementById("video");
+
+async function sendBarcode(barcode){
+
+ await supabaseClient
+  .from("scans")
+  .insert([{barcode:barcode}]);
+
+}
+
+codeReader.decodeFromVideoDevice(null, video, async (result, err) => {
+
+ if(result){
+
+   const barcode = result.text;
+
+   document.getElementById("status").innerText = "Captured: " + barcode;
+
+   await sendBarcode(barcode);
+
+ }
+
+});
+
+</script>
+
+</body>
+
+</html>

@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Staff Panel | Smart Trolley</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+    /* ══════════════════════════════════════════════════════
+       ROOT TOKENS — match admin dashboard palette exactly
+    ══════════════════════════════════════════════════════ */
+    :root {
+        --bg:         #080d13;
+        --surface:    #0f1520;
+        --surface2:   #141d2b;
+        --border:     #252e3d;
+        --accent:     #00d9ff;
+        --accent2:    #7b5ea7;
+        --green:      #3fb950;
+        --orange:     #d29922;
+        --red:        #f85149;
+        --text:       #e6edf3;
+        --text-muted: #8b949e;
+    }
+
+    /* ── RESET ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── BODY ── */
+    body {
+        font-family: 'Rajdhani', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        padding-bottom: 4rem;
+    }
+
+    /* ── GRID BACKGROUND ── */
+    body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+            linear-gradient(rgba(0,217,255,0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,217,255,0.025) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* ── PAGE WRAPPER ── */
+    .page-wrap { position: relative; z-index: 1; }
+
+    /* ══════════════════════════════════════════════════════
+       BANNER / HEADER
+    ══════════════════════════════════════════════════════ */
+    .banner {
+        background: linear-gradient(135deg, #080d13 0%, #0f1520 50%, #080d13 100%);
+        border-bottom: 1px solid var(--border);
+        padding: 1.2rem 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        position: sticky;
+        top: 0;
+        z-index: 200;
+        backdrop-filter: blur(12px);
+    }
+    .banner-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .banner h1 {
+        font-family: 'Orbitron', monospace;
+        font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .live-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: 'Orbitron', monospace;
+        font-size: 0.68rem;
+        color: var(--green);
+        letter-spacing: 0.10em;
+    }
+    .live-dot {
+        width: 8px; height: 8px;
+        background: var(--green);
+        border-radius: 50%;
+        animation: dotPulse 1.8s ease-in-out infinite;
+    }
+    @keyframes dotPulse {
+        0%,100% { opacity:1; transform:scale(1); }
+        50%      { opacity:0.4; transform:scale(0.7); }
+    }
+
+    /* Counter pills in header */
+    .banner-counts {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .count-pill {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 11px;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        font-family: 'Orbitron', monospace;
+        font-size: 0.62rem;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        transition: border-color 0.25s, color 0.25s;
+    }
+    .count-pill .pill-num {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--accent);
+        min-width: 14px;
+        text-align: center;
+    }
+    .count-pill.has-items {
+        border-color: rgba(0,217,255,0.40);
+        color: var(--text);
+        box-shadow: 0 0 8px rgba(0,217,255,0.12);
+    }
+
+    /* ── NAV TABS ── */
+    .nav-tabs {
+        display: flex;
+        gap: 0;
+        overflow-x: auto;
+        scrollbar-width: none;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+    }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+        flex-shrink: 0;
+        padding: 0.75rem 1.4rem;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--text-muted);
+        font-family: 'Orbitron', monospace;
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        cursor: pointer;
+        transition: color 0.2s, border-color 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+    }
+    .tab-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 20px;
+        background: rgba(0,217,255,0.15);
+        border: 1px solid rgba(0,217,255,0.30);
+        color: var(--accent);
+        font-size: 0.60rem;
+        font-weight: 700;
+        transition: background 0.2s, opacity 0.2s;
+    }
+    .tab-badge:empty,
+    .tab-badge[data-count="0"] { opacity: 0.3; }
+
+    /* ══════════════════════════════════════════════════════
+       MAIN CONTENT
+    ══════════════════════════════════════════════════════ */
+    .page {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem 1.2rem;
+    }
+
+    /* ── Section panel (matches admin analytics-panel) ── */
+    .section-panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-top: 1px solid rgba(0,217,255,0.18);
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 1.8rem;
+        position: relative;
+    }
+    /* shimmer top edge */
+    .section-panel::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 1px;
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(0,217,255,0.45) 40%,
+            rgba(124,77,255,0.35) 70%,
+            transparent
+        );
+        pointer-events: none;
+    }
+
+    .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--border);
+        gap: 10px;
+    }
+    .panel-title-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+    }
+    .panel-icon {
+        font-size: 1.05rem;
+        line-height: 1;
+    }
+    .panel-title {
+        font-family: 'Orbitron', monospace;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        color: var(--text);
+    }
+    .panel-count-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 20px;
+        background: rgba(0,217,255,0.12);
+        border: 1px solid rgba(0,217,255,0.28);
+        font-family: 'Orbitron', monospace;
+        font-size: 0.60rem;
+        color: var(--accent);
+        font-weight: 700;
+    }
+    .panel-action {
+        padding: 5px 12px;
+        background: transparent;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 0.80rem;
+        font-weight: 600;
+        cursor: pointer;
+        letter-spacing: 0.04em;
+        transition: border-color 0.2s, color 0.2s;
+    }
+    .panel-action:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Notification list container ── */
+    .notif-list {
+        padding: 8px 0;
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+        text-align: center;
+        padding: 2.2rem 1rem;
+        color: var(--text-muted);
+        font-size: 0.92rem;
+    }
+    .empty-state .empty-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.5;
+        display: block;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       NOTIFICATION CARD
+    ══════════════════════════════════════════════════════ */
+    .notif-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 13px;
+        padding: 13px 18px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        transition: background 0.2s;
+        position: relative;
+        overflow: hidden;
+        /* animate-in */
+        animation: cardSlideIn 0.35s ease both;
+    }
+    @keyframes cardSlideIn {
+        from { opacity:0; transform:translateY(-8px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+    .notif-card:last-child { border-bottom: none; }
+    .notif-card:hover { background: rgba(255,255,255,0.028); }
+
+    /* NEW card glow */
+    .notif-card.is-new {
+        animation: cardSlideIn 0.35s ease both, newGlow 1.8s ease-out 0.3s both;
+    }
+    @keyframes newGlow {
+        0%   { box-shadow: 0 0 0 1px rgba(0,217,255,0.6) inset; }
+        100% { box-shadow: none; }
+    }
+
+    /* left colour strip by type */
+    .notif-card::after {
+        content: "";
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: 3px;
+        border-radius: 0 2px 2px 0;
+    }
+    .notif-card[data-type="trolley"]::after { background: var(--orange); }
+    .notif-card[data-type="restock"]::after { background: var(--accent); }
+    .notif-card[data-type="admin"]::after   { background: var(--accent2); }
+
+    /* icon bubble */
+    .notif-icon {
+        flex-shrink: 0;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        margin-top: 1px;
+    }
+    .notif-card[data-type="trolley"] .notif-icon {
+        background: rgba(210,153,34,0.12);
+        border: 1px solid rgba(210,153,34,0.28);
+    }
+    .notif-card[data-type="restock"] .notif-icon {
+        background: rgba(0,217,255,0.10);
+        border: 1px solid rgba(0,217,255,0.22);
+    }
+    .notif-card[data-type="admin"] .notif-icon {
+        background: rgba(124,77,255,0.12);
+        border: 1px solid rgba(124,77,255,0.28);
+    }
+
+    /* body */
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-type-label {
+        font-family: 'Orbitron', monospace;
+        font-size: 0.58rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 3px;
+    }
+    .notif-card[data-type="trolley"] .notif-type-label { color: var(--orange); }
+    .notif-card[data-type="restock"] .notif-type-label { color: var(--accent); }
+    .notif-card[data-type="admin"]   .notif-type-label { color: var(--accent2); }
+
+    .notif-msg {
+        font-size: 0.97rem;
+        font-weight: 600;
+        color: var(--text);
+        line-height: 1.4;
+        word-break: break-word;
+    }
+    .notif-ts {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    /* status badge */
+    .notif-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 6px;
+        padding: 2px 9px;
+        border-radius: 20px;
+        font-family: 'Orbitron', monospace;
+        font-size: 0.58rem;
+        letter-spacing: 0.08em;
+        font-weight: 700;
+    }
+    .notif-status.pending {
+        background: rgba(210,153,34,0.12);
+        color: var(--orange);
+        border: 1px solid rgba(210,153,34,0.28);
+    }
+    .notif-status.completed {
+        background: rgba(63,185,80,0.10);
+        color: var(--green);
+        border: 1px solid rgba(63,185,80,0.25);
+    }
+
+    /* done button */
+    .notif-actions { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .btn-done {
+        padding: 5px 13px;
+        background: transparent;
+        border: 1px solid rgba(63,185,80,0.35);
+        border-radius: 6px;
+        color: var(--green);
+        font-family: 'Orbitron', monospace;
+        font-size: 0.60rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.18s, box-shadow 0.18s;
+    }
+    .btn-done:hover {
+        background: rgba(63,185,80,0.10);
+        box-shadow: 0 0 12px rgba(63,185,80,0.25);
+    }
+
+    /* collapse animation when marking done */
+    .notif-card.collapsing {
+        animation: cardCollapse 0.32s ease forwards;
+    }
+    @keyframes cardCollapse {
+        0%   { opacity:1; max-height:200px; padding-top:13px; padding-bottom:13px; }
+        100% { opacity:0; max-height:0;     padding-top:0;    padding-bottom:0; overflow:hidden; }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       COMPLETED SECTION
+    ══════════════════════════════════════════════════════ */
+    .completed-section {
+        margin-top: 0.5rem;
+    }
+    .completed-toggle {
+        width: 100%;
+        background: none;
+        border: none;
+        border-top: 1px solid var(--border);
+        color: var(--text-muted);
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        padding: 10px 18px;
+        text-align: left;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: color 0.2s;
+    }
+    .completed-toggle:hover { color: var(--text); }
+    .completed-toggle .toggle-arrow {
+        margin-left: auto;
+        transition: transform 0.25s ease;
+    }
+    .completed-toggle.open .toggle-arrow { transform: rotate(180deg); }
+    .completed-list { display: none; }
+    .completed-list.open { display: block; }
+    .completed-list .notif-card { opacity: 0.55; }
+    .completed-list .btn-done { display: none; }
+
+    /* ══════════════════════════════════════════════════════
+       SECTION TITLE (matches admin .section-title)
+    ══════════════════════════════════════════════════════ */
+    .section-label {
+        font-family: 'Orbitron', monospace;
+        font-size: 0.65rem;
+        letter-spacing: 0.20em;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        margin-bottom: 0.9rem;
+        padding-left: 2px;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       TAB VIEWS
+    ══════════════════════════════════════════════════════ */
+    .tab-view { display: none; }
+    .tab-view.active { display: block; }
+
+    /* ══════════════════════════════════════════════════════
+       TOAST
+    ══════════════════════════════════════════════════════ */
+    .sp-toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(16px);
+        background: rgba(8,13,22,0.96);
+        border: 1px solid rgba(0,217,255,0.40);
+        border-radius: 12px;
+        padding: 11px 20px;
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text);
+        box-shadow: 0 0 22px rgba(0,217,255,0.20), 0 8px 28px rgba(0,0,0,0.5);
+        z-index: 9999;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.28s ease, transform 0.28s ease;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+    }
+    .sp-toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       REALTIME INDICATOR (top-right corner)
+    ══════════════════════════════════════════════════════ */
+    .rt-indicator {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-family: 'Orbitron', monospace;
+        font-size: 0.60rem;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+    }
+    .rt-dot {
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: var(--text-muted);
+        transition: background 0.3s;
+    }
+    .rt-dot.connected   { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .rt-dot.connecting  { background: var(--orange); animation: dotPulse 1s infinite; }
+    .rt-dot.error       { background: var(--red); }
+
+    /* ══════════════════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════════════════ */
+    @media (max-width: 520px) {
+        .banner { padding: 1rem; }
+        .page   { padding: 1.2rem 0.8rem; }
+        .notif-card { padding: 11px 13px; gap: 10px; }
+        .notif-icon { width: 30px; height: 30px; font-size: 0.95rem; }
+        .banner-counts { display: none; }
+    }
+    </style>
+</head>
+<body>
+<div class="page-wrap">
+
+<!-- ══════════════════════════════════════════════════════════
+     BANNER
+══════════════════════════════════════════════════════════ -->
+<div class="banner">
+    <div class="banner-left">
+        <h1>🧑‍💼 Smart Trolley Staff Panel</h1>
+        <div class="live-badge"><div class="live-dot"></div> LIVE</div>
+    </div>
+
+    <div class="banner-counts">
+        <div class="count-pill" id="pillTrolley">
+            <span>⚠</span>
+            <span class="pill-num" id="pillTrolleyNum">0</span>
+            <span>TROLLEY</span>
+        </div>
+        <div class="count-pill" id="pillRestock">
+            <span>📦</span>
+            <span class="pill-num" id="pillRestockNum">0</span>
+            <span>RESTOCK</span>
+        </div>
+        <div class="count-pill" id="pillAdmin">
+            <span>📢</span>
+            <span class="pill-num" id="pillAdminNum">0</span>
+            <span>ADMIN</span>
+        </div>
+    </div>
+
+    <div class="rt-indicator">
+        <div class="rt-dot connecting" id="rtDot"></div>
+        <span id="rtLabel">CONNECTING</span>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     NAV TABS
+══════════════════════════════════════════════════════════ -->
+<div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('all',this)">
+        ☰ ALL
+        <span class="tab-badge" id="badgeAll">0</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('trolley',this)">
+        ⚠ TROLLEY ALERTS
+        <span class="tab-badge" id="badgeTrolley">0</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('restock',this)">
+        📦 RESTOCK
+        <span class="tab-badge" id="badgeRestock">0</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('admin',this)">
+        📢 ADMIN
+        <span class="tab-badge" id="badgeAdmin">0</span>
+    </button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════════════════════════════ -->
+<div class="page">
+
+    <!-- ALL TAB -->
+    <div class="tab-view active" id="tabAll">
+        <p class="section-label">All Pending Notifications</p>
+        <div class="section-panel">
+            <div class="panel-header">
+                <div class="panel-title-row">
+                    <span class="panel-icon">🔔</span>
+                    <span class="panel-title">ACTIVE TASKS</span>
+                    <span class="panel-count-badge" id="allPendingCount">0</span>
+                </div>
+                <button class="panel-action" onclick="markAllDone()">Mark All Done</button>
+            </div>
+            <div class="notif-list" id="listAll">
+                <div class="empty-state">
+                    <span class="empty-icon">✅</span>
+                    No pending notifications. All clear!
+                </div>
+            </div>
+            <!-- Completed collapse -->
+            <div class="completed-section" id="completedSectionAll">
+                <button class="completed-toggle" id="completedToggleAll" onclick="toggleCompleted('All')">
+                    ✓ Completed Tasks
+                    <span class="panel-count-badge" id="allDoneCount" style="margin-left:6px;">0</span>
+                    <span class="toggle-arrow">▼</span>
+                </button>
+                <div class="completed-list" id="completedListAll"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TROLLEY TAB -->
+    <div class="tab-view" id="tabTrolley">
+        <p class="section-label">Trolley Alerts</p>
+        <div class="section-panel">
+            <div class="panel-header">
+                <div class="panel-title-row">
+                    <span class="panel-icon">⚠</span>
+                    <span class="panel-title">TROLLEY ALERTS</span>
+                    <span class="panel-count-badge" id="trolleyPendingCount">0</span>
+                </div>
+                <button class="panel-action" onclick="markAllDoneByType('trolley')">Mark All Done</button>
+            </div>
+            <div class="notif-list" id="listTrolley">
+                <div class="empty-state">
+                    <span class="empty-icon">🛒</span>
+                    No trolley alerts right now.
+                </div>
+            </div>
+            <div class="completed-section">
+                <button class="completed-toggle" id="completedToggleTrolley" onclick="toggleCompleted('Trolley')">
+                    ✓ Completed
+                    <span class="panel-count-badge" id="trolleyDoneCount" style="margin-left:6px;">0</span>
+                    <span class="toggle-arrow">▼</span>
+                </button>
+                <div class="completed-list" id="completedListTrolley"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESTOCK TAB -->
+    <div class="tab-view" id="tabRestock">
+        <p class="section-label">Restock Requests</p>
+        <div class="section-panel">
+            <div class="panel-header">
+                <div class="panel-title-row">
+                    <span class="panel-icon">📦</span>
+                    <span class="panel-title">RESTOCK REQUESTS</span>
+                    <span class="panel-count-badge" id="restockPendingCount">0</span>
+                </div>
+                <button class="panel-action" onclick="markAllDoneByType('restock')">Mark All Done</button>
+            </div>
+            <div class="notif-list" id="listRestock">
+                <div class="empty-state">
+                    <span class="empty-icon">📦</span>
+                    No restock requests at the moment.
+                </div>
+            </div>
+            <div class="completed-section">
+                <button class="completed-toggle" id="completedToggleRestock" onclick="toggleCompleted('Restock')">
+                    ✓ Completed
+                    <span class="panel-count-badge" id="restockDoneCount" style="margin-left:6px;">0</span>
+                    <span class="toggle-arrow">▼</span>
+                </button>
+                <div class="completed-list" id="completedListRestock"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN TAB -->
+    <div class="tab-view" id="tabAdmin">
+        <p class="section-label">Admin Messages</p>
+        <div class="section-panel">
+            <div class="panel-header">
+                <div class="panel-title-row">
+                    <span class="panel-icon">📢</span>
+                    <span class="panel-title">ADMIN MESSAGES</span>
+                    <span class="panel-count-badge" id="adminPendingCount">0</span>
+                </div>
+                <button class="panel-action" onclick="markAllDoneByType('admin')">Mark All Done</button>
+            </div>
+            <div class="notif-list" id="listAdmin">
+                <div class="empty-state">
+                    <span class="empty-icon">📢</span>
+                    No admin messages yet.
+                </div>
+            </div>
+            <div class="completed-section">
+                <button class="completed-toggle" id="completedToggleAdmin" onclick="toggleCompleted('Admin')">
+                    ✓ Completed
+                    <span class="panel-count-badge" id="adminDoneCount" style="margin-left:6px;">0</span>
+                    <span class="toggle-arrow">▼</span>
+                </button>
+                <div class="completed-list" id="completedListAdmin"></div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /page -->
+</div><!-- /page-wrap -->
+
+<!-- ── Toast ── -->
+<div class="sp-toast" id="spToast">
+    <span id="spToastIcon">✅</span>
+    <span id="spToastMsg">Task marked as done.</span>
+</div>
+
+<!-- ── Google Translate (keep existing module) ── -->
+<div id="google_translate_element" style="display:none;"></div>
+<script>
+function googleTranslateElementInit() {
+    new google.translate.TranslateElement(
+        { pageLanguage: 'en', autoDisplay: false },
+        'google_translate_element'
+    );
+}
+</script>
+<script>
+setInterval(function () {
+    const banner = document.querySelector('.goog-te-banner-frame');
+    if (banner) banner.style.display = 'none';
+    document.body.style.top = '0px';
+}, 500);
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+<!-- ── Supabase ── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- ══════════════════════════════════════════════════════════
+     STAFF PANEL LOGIC
+══════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+    'use strict';
+
+    /* ════════════════════════════════════════════════════
+       ① SUPABASE CONFIG
+       Replace these with your actual project values.
+       They must match what js/admin.js already uses.
+    ════════════════════════════════════════════════════ */
+    const SUPABASE_URL  = 'https://nqjuqjrafhurzkudqcbn.supabase.co'; 
+    const SUPABASE_ANON = 'sb_publishable_v6cpkfut0eEAlapT0g5Ojw_3ZVa-U8u';       
+
+    let sb = null;
+    try {
+        sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    } catch (e) {
+        console.error('[StaffPanel] Supabase init failed:', e);
+    }
+
+    /* ════════════════════════════════════════════════════
+       ② IN-MEMORY STATE
+    ════════════════════════════════════════════════════ */
+    // Map: id → notification object
+    const state = {
+        pending:   new Map(),   // id → item
+        completed: new Map()    // id → item
+    };
+
+    /* ════════════════════════════════════════════════════
+       ③ TYPE META  (icon, label, colour)
+    ════════════════════════════════════════════════════ */
+    const TYPE_META = {
+        trolley: { icon: '⚠️',  label: 'Trolley Alert'   },
+        restock: { icon: '📦',  label: 'Restock Request'  },
+        admin:   { icon: '📢',  label: 'Admin Message'    }
+    };
+
+    /* ════════════════════════════════════════════════════
+       ④ DOM HELPERS
+    ════════════════════════════════════════════════════ */
+    const $ = id => document.getElementById(id);
+
+    let toastTimer = null;
+    function showToast(msg, icon = '✅') {
+        const t = $('spToast');
+        $('spToastMsg').textContent = msg;
+        $('spToastIcon').textContent = icon;
+        t.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function formatTs(isoString) {
+        if (!isoString) return '';
+        const d = new Date(isoString);
+        return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short' }) +
+               ' ' + d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:true });
+    }
+
+    /* ════════════════════════════════════════════════════
+       ⑤ RENDER A SINGLE NOTIFICATION CARD
+    ════════════════════════════════════════════════════ */
+    function buildCard(item, isNew = false) {
+        const meta = TYPE_META[item.type] || { icon: '🔔', label: item.type };
+        const isDone = item.status === 'completed';
+
+        const card = document.createElement('div');
+        card.className = 'notif-card' + (isNew ? ' is-new' : '');
+        card.dataset.type = item.type;
+        card.dataset.id   = item.id;
+
+        card.innerHTML = `
+            <div class="notif-icon">${meta.icon}</div>
+            <div class="notif-body">
+                <div class="notif-type-label">${meta.label}</div>
+                <div class="notif-msg">${escHtml(item.message)}</div>
+                <div class="notif-ts">${formatTs(item.timestamp || item.created_at)}</div>
+                <div class="notif-status ${isDone ? 'completed' : 'pending'}">
+                    ${isDone ? '✓ Completed' : '● Pending'}
+                </div>
+            </div>
+            <div class="notif-actions">
+                ${!isDone ? `<button class="btn-done" onclick="markDone('${item.id}')">✓ DONE</button>` : ''}
+            </div>
+        `;
+        return card;
+    }
+
+    function escHtml(str) {
+        return String(str)
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;');
+    }
+
+    /* ════════════════════════════════════════════════════
+       ⑥ RENDER ALL LISTS
+    ════════════════════════════════════════════════════ */
+    const TYPES = ['trolley', 'restock', 'admin'];
+
+    function renderAll() {
+        // Clear pending lists
+        ['All', ...TYPES.map(t => t[0].toUpperCase() + t.slice(1))].forEach(label => {
+            const listId = 'list' + label;
+            const el = $(listId);
+            if (el) el.innerHTML = '';
+        });
+        // Clear completed lists
+        ['All', ...TYPES.map(t => t[0].toUpperCase() + t.slice(1))].forEach(label => {
+            const el = $('completedList' + label);
+            if (el) el.innerHTML = '';
+        });
+
+        const pendingArr  = Array.from(state.pending.values()).sort((a,b) => new Date(b.timestamp||b.created_at) - new Date(a.timestamp||a.created_at));
+        const completedArr = Array.from(state.completed.values()).sort((a,b) => new Date(b.timestamp||b.created_at) - new Date(a.timestamp||a.created_at));
+
+        /* Pending → All list + typed lists */
+        pendingArr.forEach(item => {
+            $('listAll').appendChild(buildCard(item));
+            const typedList = $('list' + item.type[0].toUpperCase() + item.type.slice(1));
+            if (typedList) typedList.appendChild(buildCard(item));
+        });
+
+        /* Completed → All completed + typed completed */
+        completedArr.forEach(item => {
+            $('completedListAll').appendChild(buildCard(item, false));
+            const typedList = $('completedList' + item.type[0].toUpperCase() + item.type.slice(1));
+            if (typedList) typedList.appendChild(buildCard(item, false));
+        });
+
+        /* Empty states */
+        showEmptyIfNeeded('listAll',     'All pending notifications. All clear!', '✅');
+        showEmptyIfNeeded('listTrolley', 'No trolley alerts right now.', '🛒');
+        showEmptyIfNeeded('listRestock', 'No restock requests at the moment.', '📦');
+        showEmptyIfNeeded('listAdmin',   'No admin messages yet.', '📢');
+
+        updateCounts();
+    }
+
+    function showEmptyIfNeeded(listId, msg, icon) {
+        const el = $(listId);
+        if (el && el.children.length === 0) {
+            el.innerHTML = `<div class="empty-state"><span class="empty-icon">${icon}</span>${msg}</div>`;
+        }
+    }
+
+    function updateCounts() {
+        const pending  = Array.from(state.pending.values());
+        const completed = Array.from(state.completed.values());
+
+        const pAll = pending.length;
+        const cAll = completed.length;
+
+        const pTrolley = pending.filter(i => i.type === 'trolley').length;
+        const pRestock = pending.filter(i => i.type === 'restock').length;
+        const pAdmin   = pending.filter(i => i.type === 'admin').length;
+
+        const cTrolley = completed.filter(i => i.type === 'trolley').length;
+        const cRestock = completed.filter(i => i.type === 'restock').length;
+        const cAdmin   = completed.filter(i => i.type === 'admin').length;
+
+        // Panel badges
+        $('allPendingCount').textContent     = pAll;
+        $('allDoneCount').textContent        = cAll;
+        $('trolleyPendingCount').textContent = pTrolley;
+        $('trolleyDoneCount').textContent    = cTrolley;
+        $('restockPendingCount').textContent = pRestock;
+        $('restockDoneCount').textContent    = cRestock;
+        $('adminPendingCount').textContent   = pAdmin;
+        $('adminDoneCount').textContent      = cAdmin;
+
+        // Tab badges
+        $('badgeAll').textContent     = pAll     || '';
+        $('badgeTrolley').textContent = pTrolley || '';
+        $('badgeRestock').textContent = pRestock || '';
+        $('badgeAdmin').textContent   = pAdmin   || '';
+
+        // Header pills
+        $('pillTrolleyNum').textContent = pTrolley;
+        $('pillRestockNum').textContent = pRestock;
+        $('pillAdminNum').textContent   = pAdmin;
+
+        ['pillTrolley','pillRestock','pillAdmin'].forEach(id => {
+            const num = parseInt($(id).querySelector('.pill-num').textContent, 10) || 0;
+            $(id).classList.toggle('has-items', num > 0);
+        });
+    }
+
+    /* ════════════════════════════════════════════════════
+       ⑦ LOAD EXISTING NOTIFICATIONS FROM SUPABASE
+    ════════════════════════════════════════════════════ */
+    async function loadNotifications() {
+        if (!sb) { loadFromLocalStorage(); return; }
+
+        try {
+            const { data, error } = await sb
+                .from('staff_notifications')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(200);
+
+            if (error) throw error;
+
+            state.pending.clear();
+            state.completed.clear();
+
+            (data || []).forEach(row => {
+                const item = normaliseRow(row);
+                if (item.status === 'completed') {
+                    state.completed.set(item.id, item);
+                } else {
+                    state.pending.set(item.id, item);
+                }
+            });
+
+            renderAll();
+
+        } catch (err) {
+            console.warn('[StaffPanel] Supabase load failed, falling back to localStorage:', err);
+            loadFromLocalStorage();
+        }
+    }
+
+    function normaliseRow(row) {
+        return {
+            id:        String(row.id),
+            type:      row.type      || 'admin',
+            message:   row.message   || '',
+            status:    row.status    || 'pending',
+            timestamp: row.timestamp || row.created_at
+        };
+    }
+
+    /* ════════════════════════════════════════════════════
+       ⑧ LOCALSTROAGE FALLBACK
+       Reads the keys written by admin.html (restockTasks,
+       restockLog) and billing.html (trolleyAlerts).
+    ════════════════════════════════════════════════════ */
+    function loadFromLocalStorage() {
+        state.pending.clear();
+        state.completed.clear();
+
+        // --- Restock tasks from admin dashboard ---
+        try {
+            const log = JSON.parse(localStorage.getItem('restockLog') || '[]');
+            log.forEach((entry, idx) => {
+                const products = Array.isArray(entry.products) ? entry.products : [];
+                products.forEach((p, pidx) => {
+                    const id = `ls_restock_${idx}_${pidx}`;
+                    if (!state.pending.has(id)) {
+                        state.pending.set(id, {
+                            id,
+                            type:      'restock',
+                            message:   `${p} needs restocking.`,
+                            status:    'pending',
+                            timestamp: entry.timestamp || new Date().toISOString()
+                        });
+                    }
+                });
+            });
+        } catch (_) {}
+
+        // --- Trolley alerts ---
+        try {
+            const alerts = JSON.parse(localStorage.getItem('trolleyAlerts') || '[]');
+            alerts.forEach((a, idx) => {
+                const id = `ls_trolley_${idx}`;
+                state.pending.set(id, {
+                    id,
+                    type:      'trolley',
+                    message:   a.message || `Trolley inactive alert.`,
+                    status:    'pending',
+                    timestamp: a.timestamp || new Date().toISOString()
+                });
+            });
+        } catch (_) {}
+
+        renderAll();
+    }
+
+    /* ════════════════════════════════════════════════════
+       ⑨ REALTIME SUBSCRIPTION
+    ════════════════════════════════════════════════════ */
+    function setupRealtime() {
+        if (!sb) {
+            setRtStatus('error', 'OFFLINE');
+            return;
+        }
+
+        setRtStatus('connecting', 'CONNECTING');
+
+        sb.channel('staff_notifications_changes')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'staff_notifications' },
+                handleRealtimeEvent
+            )
+            .subscribe(status => {
+                if (status === 'SUBSCRIBED') {
+                    setRtStatus('connected', 'LIVE');
+                } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+                    setRtStatus('error', 'RECONNECTING');
+                    setTimeout(setupRealtime, 4000);
+                }
+            });
+    }
+
+    function handleRealtimeEvent(payload) {
+        const { eventType, new: newRow, old: oldRow } = payload;
+
+        if (eventType === 'INSERT') {
+            const item = normaliseRow(newRow);
+            if (item.status === 'completed') {
+                state.completed.set(item.id, item);
+            } else {
+                state.pending.set(item.id, item);
+                injectNewCard(item);   // fast-path: inject without full re-render
+            }
+            updateCounts();
+            showToast(`New ${item.type} notification received.`, TYPE_META[item.type]?.icon || '🔔');
+
+        } else if (eventType === 'UPDATE') {
+            const item = normaliseRow(newRow);
+            state.pending.delete(item.id);
+            state.completed.delete(item.id);
+            if (item.status === 'completed') {
+                state.completed.set(item.id, item);
+            } else {
+                state.pending.set(item.id, item);
+            }
+            renderAll();
+
+        } else if (eventType === 'DELETE') {
+            const id = String(oldRow.id);
+            state.pending.delete(id);
+            state.completed.delete(id);
+            renderAll();
+        }
+    }
+
+    /* Fast-path: prepend a new card to the relevant lists without full re-render */
+    function injectNewCard(item) {
+        const typeCap = item.type[0].toUpperCase() + item.type.slice(1);
+        const targets = [
+            $('listAll'),
+            $('list' + typeCap)
+        ];
+
+        targets.forEach(list => {
+            if (!list) return;
+            // Remove empty state if present
+            const empty = list.querySelector('.empty-state');
+            if (empty) empty.remove();
+            // Prepend new card
+            const card = buildCard(item, true);
+            list.insertBefore(card, list.firstChild);
+        });
+    }
+
+    function setRtStatus(state, label) {
+        const dot = $('rtDot');
+        const lbl = $('rtLabel');
+        dot.className = 'rt-dot ' + state;
+        lbl.textContent = label;
+    }
+
+    /* ════════════════════════════════════════════════════
+       ⑩ MARK DONE
+    ════════════════════════════════════════════════════ */
+    window.markDone = async function (id) {
+        const item = state.pending.get(String(id));
+        if (!item) return;
+
+        /* Animate out */
+        const cards = document.querySelectorAll(`.notif-card[data-id="${id}"]`);
+        cards.forEach(c => c.classList.add('collapsing'));
+
+        await new Promise(r => setTimeout(r, 320));
+
+        /* Move in state */
+        item.status = 'completed';
+        state.pending.delete(String(id));
+        state.completed.set(String(id), item);
+
+        /* Persist to Supabase */
+        if (sb) {
+            sb.from('staff_notifications')
+              .update({ status: 'completed' })
+              .eq('id', id)
+              .then(({ error }) => { if (error) console.warn('[StaffPanel] Update error:', error); });
+        } else {
+            /* localStorage fallback: just remove from pending */
+            markDoneLocalStorage(item);
+        }
+
+        renderAll();
+        showToast('Task marked as done!', '✅');
+    };
+
+    function markDoneLocalStorage(item) {
+        if (item.type === 'restock') {
+            try {
+                let tasks = JSON.parse(localStorage.getItem('restockTasks') || '[]');
+                const product = item.message.replace(' needs restocking.','').trim();
+                tasks = tasks.filter(t => t !== product);
+                localStorage.setItem('restockTasks', JSON.stringify(tasks));
+            } catch (_) {}
+        }
+    }
+
+    window.markAllDone = function () {
+        const ids = Array.from(state.pending.keys());
+        if (!ids.length) return;
+        Promise.all(ids.map(id => markDone(id)));
+    };
+
+    window.markAllDoneByType = function (type) {
+        const ids = Array.from(state.pending.values())
+            .filter(i => i.type === type)
+            .map(i => i.id);
+        if (!ids.length) return;
+        Promise.all(ids.map(id => markDone(id)));
+    };
+
+    /* ════════════════════════════════════════════════════
+       ⑪ TAB SWITCHING
+    ════════════════════════════════════════════════════ */
+    window.switchTab = function (tab, btn) {
+        document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        $('tab' + tab[0].toUpperCase() + tab.slice(1)).classList.add('active');
+        btn.classList.add('active');
+    };
+
+    /* ════════════════════════════════════════════════════
+       ⑫ COMPLETED SECTION TOGGLE
+    ════════════════════════════════════════════════════ */
+    window.toggleCompleted = function (label) {
+        const btn  = $('completedToggle' + label);
+        const list = $('completedList'   + label);
+        if (!btn || !list) return;
+        const isOpen = list.classList.toggle('open');
+        btn.classList.toggle('open', isOpen);
+    };
+
+    /* ════════════════════════════════════════════════════
+       ⑬ BOOT
+    ════════════════════════════════════════════════════ */
+    document.addEventListener('DOMContentLoaded', function () {
+        loadNotifications();
+        setupRealtime();
+    });
+
+})();
+</script>
+
+</body>
+</html>

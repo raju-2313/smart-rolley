@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>About | Smart Trolley</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet" />
+</head>
+
+<body>
+
+  <div class="grid-bg"></div>
+
+  <!-- PRELOADER -->
+  <div id="preloader">
+    <div class="corner corner--tl"></div>
+    <div class="corner corner--tr"></div>
+    <div class="corner corner--bl"></div>
+    <div class="corner corner--br"></div>
+
+    <div class="stage">
+
+      <!-- Step 2: Title -->
+      <div class="title-block" id="titleBlock">
+        <div class="title-eyebrow">SYSTEM INITIALIZING</div>
+        <div class="title-main">Smart&nbsp;Trolley</div>
+        <div class="title-sub">INTELLIGENT RETAIL PLATFORM · v2.4</div>
+      </div>
+
+      <!-- Step 3–5: Barcode → Product -->
+      <div class="barcode-wrap" id="barcodeWrap" style="width:220px; height:80px;">
+        <!-- Barcode SVG -->
+        <svg id="barcodeSvg" class="barcode-svg" width="220" height="80" viewBox="0 0 220 80" xmlns="http://www.w3.org/2000/svg">
+          <!-- bars -->
+          <rect x="10"  y="4" width="3"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="16"  y="4" width="6"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="25"  y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="30"  y="4" width="5"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="38"  y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="43"  y="4" width="4"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="50"  y="4" width="3"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="56"  y="4" width="7"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="66"  y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="71"  y="4" width="4"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="78"  y="4" width="6"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="87"  y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="92"  y="4" width="5"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="100" y="4" width="3"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="106" y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="111" y="4" width="6"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="120" y="4" width="3"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="126" y="4" width="5"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="134" y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="139" y="4" width="4"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="146" y="4" width="7"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="156" y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="161" y="4" width="5"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="169" y="4" width="3"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="175" y="4" width="6"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="184" y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="189" y="4" width="4"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="196" y="4" width="3"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="202" y="4" width="6"  height="72" fill="#00e5ff" opacity="0.9"/>
+        </svg>
+
+        <!-- Laser -->
+        <div class="laser" id="laser"></div>
+
+        <!-- Product box icon (hidden until after scan) -->
+        <div class="product-icon" id="productIcon">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M32 4L58 18V46L32 60L6 46V18L32 4Z" stroke="#00e5ff" stroke-width="1.8" fill="rgba(0,229,255,0.06)"/>
+            <path d="M32 4L32 60" stroke="#00e5ff" stroke-width="1" stroke-dasharray="3 3" opacity="0.4"/>
+            <path d="M6 18L58 18" stroke="#00e5ff" stroke-width="1" stroke-dasharray="3 3" opacity="0.4"/>
+            <path d="M32 4L58 18" stroke="#2979ff" stroke-width="1.8"/>
+            <path d="M32 4L6 18"  stroke="#2979ff" stroke-width="1.8"/>
+            <circle cx="32" cy="32" r="4" fill="#00e5ff" opacity="0.8"/>
+            <path d="M18 25L32 32L46 25" stroke="#00e5ff" stroke-width="1" opacity="0.5"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Step 6: Cart -->
+      <div class="cart-area" id="cartArea">
+        <!-- Flying product clone -->
+        <div class="fly-item" id="flyItem">
+          <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M32 4L58 18V46L32 60L6 46V18L32 4Z" stroke="#00e5ff" stroke-width="2" fill="rgba(0,229,255,0.15)"/>
+          </svg>
+        </div>
+
+        <!-- Cart SVG -->
+        <svg class="cart-svg" width="120" height="72" viewBox="0 0 120 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- handle -->
+          <path d="M4 8H18L30 48H96L104 24H36" stroke="#2979ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- basket outline -->
+          <path d="M30 48H96" stroke="#2979ff" stroke-width="2.2" stroke-linecap="round"/>
+          <!-- wheels -->
+          <circle cx="42" cy="60" r="6" stroke="#00e5ff" stroke-width="2" fill="rgba(0,229,255,0.08)"/>
+          <circle cx="84" cy="60" r="6" stroke="#00e5ff" stroke-width="2" fill="rgba(0,229,255,0.08)"/>
+          <!-- item suggestions inside cart -->
+          <rect x="52" y="34" width="8"  height="10" rx="1" fill="rgba(0,229,255,0.18)" id="cartItem1" opacity="0"/>
+          <rect x="63" y="30" width="8"  height="14" rx="1" fill="rgba(41,121,255,0.22)" id="cartItem2" opacity="0"/>
+          <rect x="74" y="36" width="6"  height="8"  rx="1" fill="rgba(124,77,255,0.22)" id="cartItem3" opacity="0"/>
+        </svg>
+      </div>
+
+      <!-- Step 7: Progress -->
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-label">
+          <span>LOADING INVENTORY</span>
+          <span id="pctLabel">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <!-- Step 8: Ready -->
+      <div class="ready-text" id="readyText" style="position:relative;">
+        <div class="pulse-ring" id="pulseRing"></div>
+        <div class="ready-main">Smart Trolley Ready</div>
+        <div class="ready-sub">ENTERING MAIN INTERFACE &nbsp;→</div>
+      </div>
+
+    </div><!-- /stage -->
+  </div><!-- /preloader -->
+
+
+    <div class="header">
+        <h1>🛒 Smart Trolley</h1>
+        <p class="tagline">Scan • Shop • Checkout Seamlessly</p>
+    </div>
+
+    <div class="nav">
+        <a href="index.html" class="active">Home</a>
+        <a href="billing.html" >Billing</a>
+        <a href="contact.html" >Contact Us</a>
+        <a href="store-map.html">Store Map</a>
+        <a href="admin-login.html">Admin</a>
+        <a href="staff-login.html">Staff</a>
+    </div>
+
+
+<div class="about-wrapper">
+ 
+  <!-- ── Section 1 · About ─────────────────────────────────── -->
+  <section class="about-section about-intro">
+    <div class="about-section-badge">
+      <span class="badge-dot"></span>
+      <span>ABOUT THE SYSTEM</span>
+    </div>
+ 
+    <h2 class="about-heading">Smart&nbsp;Trolley</h2>
+ 
+    <div class="about-divider"></div>
+ 
+    <p class="about-para">
+      Smart Trolley is a self-checkout retail solution designed to
+      eliminate long billing queues in large stores.
+    </p>
+    <p class="about-para">
+      Customers can scan products directly into the trolley, view
+      real-time totals, and proceed to either online payment or counter
+      checkout.
+    </p>
+    <p class="about-para">
+      The system is built using modern web technologies and is optimised
+      for tablet-based retail environments.
+    </p>
+  </section>
+ 
+  <!-- ── Section 2 · Key Features ─────────────────────────── -->
+  <section class="about-section about-features">
+    <div class="about-section-badge">
+      <span class="badge-dot badge-dot--blue"></span>
+      <span>KEY FEATURES</span>
+    </div>
+ 
+    <h3 class="about-subheading">What makes it powerful</h3>
+ 
+    <div class="feature-grid">
+ 
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+            <path d="M14 17h3m4 0h-4m0 0v-3m0 3v3"/>
+          </svg>
+        </div>
+        <div class="feature-text">
+          <strong>Real-time Barcode Scanning</strong>
+          <span>Instant product recognition with live cart updates</span>
+        </div>
+      </div>
+ 
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+          </svg>
+        </div>
+        <div class="feature-text">
+          <strong>Dynamic Cart Management</strong>
+          <span>Add, adjust and remove items on the fly</span>
+        </div>
+      </div>
+ 
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="5" width="20" height="14" rx="2"/>
+            <path d="M2 10h20"/>
+          </svg>
+        </div>
+        <div class="feature-text">
+          <strong>Online &amp; Offline Payment</strong>
+          <span>Flexible checkout — digital or counter</span>
+        </div>
+      </div>
+ 
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/>
+          </svg>
+        </div>
+        <div class="feature-text">
+          <strong>QR-based Payment</strong>
+          <span>Auto-generated QR for frictionless pay</span>
+        </div>
+      </div>
+ 
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+          </svg>
+        </div>
+        <div class="feature-text">
+          <strong>Store Mapping Integration</strong>
+          <span>Future-ready aisle navigation built in</span>
+        </div>
+      </div>
+ 
+    </div>
+  </section>
+ 
+  <!-- ── Section 3 · How to Use ────────────────────────────── -->
+  <section class="about-section about-how">
+    <div class="about-section-badge">
+      <span class="badge-dot badge-dot--purple"></span>
+      <span>HOW TO USE</span>
+    </div>
+ 
+    <h3 class="about-subheading">Getting started in 5 steps</h3>
+ 
+    <ol class="steps-list">
+ 
+      <li class="step-item">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <strong>Verify the cart number</strong>
+          <p>Check that the cart number on the display matches the one on your trolley before starting.</p>
+        </div>
+      </li>
+ 
+      <li class="step-item">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <strong>Open Billing</strong>
+          <p>Navigate to the <em>Billing</em> section on the display screen.</p>
+        </div>
+      </li>
+ 
+      <li class="step-item">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <strong>Scan your items</strong>
+          <p>Scan each product and wait for it to appear in your cart before moving to the next.</p>
+        </div>
+      </li>
+ 
+      <li class="step-item">
+        <div class="step-num">04</div>
+        <div class="step-body">
+          <strong>Checkout &amp; pay</strong>
+          <p>When done shopping, tap <em>Checkout</em> and select your preferred payment method.</p>
+        </div>
+      </li>
+ 
+      <li class="step-item">
+        <div class="step-num">05</div>
+        <div class="step-body">
+          <strong>Finish transaction</strong>
+          <p>After payment is confirmed, tap <em>Finish Transaction</em> to complete your session.</p>
+        </div>
+      </li>
+ 
+    </ol>
+  </section>
+ 
+  <!-- ── Footer line ───────────────────────────────────────── -->
+  <footer class="about-footer">
+    <span>&copy; 2026 Smart Trolley</span>
+  </footer>
+ 
+</div><!-- /about-wrapper -->
+
+  <!-- ══ ROBOT LANGUAGE SELECTOR ══ -->
+  <div id="langRobotOverlay">
+      <div class="lr-card">
+          <div class="lr-glow"></div>
+
+          <model-viewer
+              class="lr-robot"
+              src="models/robot.glb"
+              alt="Smart Trolley Assistant"
+              auto-rotate
+              disable-zoom
+              rotation-per-second="0deg"
+              interaction-prompt="none"
+              ar-status="not-presenting">
+          </model-viewer>
+
+          <!-- TAP BUTTON — visible first, hides after tap -->
+          <button class="lr-start-btn" id="lrTapHint" onclick="revealLanguageUI()">
+              <span class="lr-start-ripple"></span>
+              ▶ &nbsp; Tap to Begin
+          </button>
+
+          <!-- BUBBLE + BUTTONS — hidden until tap -->
+          <div class="lr-bubble" id="lrBubble" style="display:none;">
+              👋 Welcome! Please select your language.
+          </div>
+
+          <div class="lr-buttons" id="lrButtons" style="display:none;">
+              <button class="lr-btn" onclick="selectLang('en')">🇬🇧 &nbsp; English</button>
+              <button class="lr-btn" onclick="selectLang('hi')">🇮🇳 &nbsp; हिंदी</button>
+              <button class="lr-btn" onclick="selectLang('mr')">🇮🇳 &nbsp; मराठी</button>
+          </div>
+      </div>
+  </div>
+
+  <!-- Audio -->
+  <audio id="langAudio" src="voices/language_select.mp3" preload="auto"></audio>
+
+  <!-- model-viewer (needed for the robot) -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+
+    <div id="google_translate_element" style="display:none;"></div>
+
+    <script>
+    function googleTranslateElementInit() {
+    new google.translate.TranslateElement(
+        {pageLanguage: 'en', autoDisplay: false},
+        'google_translate_element'
+    );
+    }
+    </script>
+
+    <script>
+
+
+        setInterval(function() {
+            const banner = document.querySelector(".goog-te-banner-frame");
+            if (banner) {
+                banner.style.display = "none";
+            }
+
+            document.body.style.top = "0px";
+        }, 500);
+        
+    </script>
+
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <script src="js/preeloader.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

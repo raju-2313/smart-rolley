@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Login</title>
+    <style>
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        }
+
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            width: 320px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .login-container h2 {
+            margin-bottom: 20px;
+            color: #2c5364;
+        }
+
+        .login-container input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        .login-container button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 8px;
+            background: #2c5364;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .login-container button:hover {
+            background: #203a43;
+        }
+
+        .error {
+            color: red;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<div class="login-container">
+    <h2>Smart Trolley Admin</h2>
+
+    <input type="password" id="adminPass" placeholder="Enter Password">
+
+    <button onclick="checkLogin()">Login</button>
+
+    <div id="errorMsg" class="error"></div>
+</div>
+
+<script>
+
+function checkLogin() {
+
+    const password = "Smart@123";
+    const entered = document.getElementById("adminPass").value;
+
+    if (entered === password) {
+        sessionStorage.setItem("adminLoggedIn", "true");
+        window.location.href = "admin.html";
+    } else {
+        document.getElementById("errorMsg").innerText = "Incorrect Password";
+    }
+}
+
+</script>
+
+</body>
+</html>

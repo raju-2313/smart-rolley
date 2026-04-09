@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Trolley</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet" />
+
+  <!-- ===================== CSS ===================== -->
+  <style>
+    /* ── RESET & ROOT ── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:         #050a12;
+      --surface:    #0b1424;
+      --cyan:       #00e5ff;
+      --blue:       #2979ff;
+      --purple:     #7c4dff;
+      --white:      #e8f4ff;
+      --dim:        rgba(0,229,255,0.08);
+      --glow-cyan:  0 0 12px #00e5ff, 0 0 40px rgba(0,229,255,0.4);
+      --glow-blue:  0 0 12px #2979ff, 0 0 40px rgba(41,121,255,0.4);
+      --glow-soft:  0 0 6px rgba(0,229,255,0.3);
+    }
+
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── PRELOADER WRAPPER ── */
+    #preloader {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      transition: opacity 0.9s ease, visibility 0.9s ease;
+    }
+
+    #preloader.fade-out {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    /* scanline overlay */
+    #preloader::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0,229,255,0.018) 3px,
+        rgba(0,229,255,0.018) 4px
+      );
+      pointer-events: none;
+    }
+
+    /* corner brackets */
+    .corner { position: absolute; width: 48px; height: 48px; opacity: 0; transition: opacity 0.6s; }
+    .corner--tl { top: 24px; left: 24px; border-top: 2px solid var(--cyan); border-left:  2px solid var(--cyan); }
+    .corner--tr { top: 24px; right: 24px; border-top: 2px solid var(--cyan); border-right: 2px solid var(--cyan); }
+    .corner--bl { bottom: 24px; left: 24px; border-bottom: 2px solid var(--cyan); border-left:  2px solid var(--cyan); }
+    .corner--br { bottom: 24px; right: 24px; border-bottom: 2px solid var(--cyan); border-right: 2px solid var(--cyan); }
+    .corner.visible { opacity: 0.6; }
+
+    /* ── STAGE ── */
+    .stage {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+      width: min(520px, 90vw);
+    }
+
+    /* ── TITLE ── */
+    .title-block {
+      text-align: center;
+      opacity: 0;
+      transform: translateY(-16px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .title-block.visible { opacity: 1; transform: translateY(0); }
+
+    .title-eyebrow {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 11px;
+      letter-spacing: 6px;
+      color: var(--cyan);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      opacity: 0.7;
+    }
+
+    .title-main {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(2rem, 8vw, 3.6rem);
+      font-weight: 900;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, var(--cyan) 0%, var(--blue) 60%, var(--purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 14px rgba(0,229,255,0.55));
+    }
+
+    .title-sub {
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: rgba(232,244,255,0.4);
+      margin-top: 8px;
+    }
+
+    /* ── BARCODE ── */
+    .barcode-wrap {
+      position: relative;
+      opacity: 0;
+      transform: scale(0.88);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .barcode-wrap.visible { opacity: 1; transform: scale(1); }
+
+    .barcode-svg {
+      display: block;
+      filter: drop-shadow(0 0 8px rgba(0,229,255,0.3));
+    }
+
+    /* scanner laser */
+    .laser {
+      position: absolute;
+      left: -6px; right: -6px;
+      top: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--cyan), var(--blue), var(--cyan), transparent);
+      box-shadow: 0 0 10px var(--cyan), 0 0 24px rgba(0,229,255,0.7);
+      opacity: 0;
+      border-radius: 2px;
+    }
+    .laser.scanning {
+      animation: scanDown 1.2s cubic-bezier(0.4,0,0.6,1) forwards;
+    }
+    @keyframes scanDown {
+      0%   { top: 0%;   opacity: 1; }
+      90%  { top: 100%; opacity: 1; }
+      100% { top: 100%; opacity: 0; }
+    }
+
+    /* ── PRODUCT ICON (box) ── */
+    .product-icon {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transform: scale(0.7);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .product-icon.visible { opacity: 1; transform: scale(1); }
+
+    .product-icon svg { filter: drop-shadow(0 0 12px var(--cyan)); }
+
+    /* ── CART AREA ── */
+    .cart-area {
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      height: 80px;
+      width: 100%;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+    .cart-area.visible { opacity: 1; }
+
+    .cart-svg { filter: drop-shadow(0 0 10px rgba(41,121,255,0.6)); }
+
+    /* flying product */
+    .fly-item {
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+    }
+    .fly-item.fly-animate {
+      animation: flyIntoCart 0.7s cubic-bezier(0.6,0,0.4,1) forwards;
+    }
+    @keyframes flyIntoCart {
+      0%   { top: 0;   left: 50%; transform: translateX(-50%) scale(1);   opacity: 1; }
+      60%  { opacity: 1; }
+      100% { top: 48px; left: 58%; transform: translateX(-50%) scale(0.3); opacity: 0; }
+    }
+
+    /* ── PROGRESS BAR ── */
+    .progress-wrap {
+      width: 100%;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    .progress-wrap.visible { opacity: 1; }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: rgba(232,244,255,0.4);
+      margin-bottom: 6px;
+    }
+
+    .progress-track {
+      height: 3px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 99px;
+      overflow: hidden;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--purple), var(--blue), var(--cyan));
+      border-radius: 99px;
+      box-shadow: 0 0 8px var(--cyan);
+      transition: width 1.6s cubic-bezier(0.2,0.8,0.4,1);
+    }
+    .progress-fill.filled { width: 100%; }
+
+    /* shimmer sweep */
+    .progress-track::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.25) 50%, transparent 70%);
+      transform: translateX(-100%);
+      animation: shimmer 2.4s 1.2s infinite;
+    }
+    @keyframes shimmer {
+      to { transform: translateX(300%); }
+    }
+
+    /* ── READY TEXT ── */
+    .ready-text {
+      text-align: center;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .ready-text.visible { opacity: 1; transform: translateY(0); }
+
+    .ready-main {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(0.9rem, 3vw, 1.15rem);
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: var(--cyan);
+      text-shadow: var(--glow-cyan);
+    }
+    .ready-sub {
+      font-size: 10px;
+      letter-spacing: 4px;
+      color: rgba(232,244,255,0.3);
+      margin-top: 5px;
+    }
+
+    /* pulse ring on ready */
+    .pulse-ring {
+      position: absolute;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 6px var(--cyan);
+      top: 50%; left: -18px;
+      transform: translateY(-50%);
+      opacity: 0;
+    }
+    .pulse-ring.active {
+      opacity: 1;
+      animation: pulse 1.4s ease-out infinite;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(0,229,255,0.7); }
+      70%  { box-shadow: 0 0 0 8px rgba(0,229,255,0); }
+      100% { box-shadow: 0 0 0 0 rgba(0,229,255,0); }
+    }
+
+    /* grid particle background */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black, transparent);
+    }
+
+    /* ── MAIN CONTENT (behind preloader) ── */
+    #main-content {
+      display: none;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      opacity: 0;
+      transition: opacity 1s ease 0.3s;
+    }
+    #main-content.visible { opacity: 1; }
+
+    .hero-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(2rem, 8vw, 4rem);
+      font-weight: 900;
+      letter-spacing: 4px;
+      background: linear-gradient(135deg, var(--cyan), var(--blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .hero-sub {
+      color: rgba(232,244,255,0.5);
+      font-size: 1rem;
+      letter-spacing: 2px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===================== HTML ===================== -->
+  <div class="grid-bg"></div>
+
+  <!-- PRELOADER -->
+  <div id="preloader">
+    <div class="corner corner--tl"></div>
+    <div class="corner corner--tr"></div>
+    <div class="corner corner--bl"></div>
+    <div class="corner corner--br"></div>
+
+    <div class="stage">
+
+      <!-- Step 2: Title -->
+      <div class="title-block" id="titleBlock">
+        <div class="title-eyebrow">SYSTEM INITIALIZING</div>
+        <div class="title-main">Smart&nbsp;Trolley</div>
+        <div class="title-sub">INTELLIGENT RETAIL PLATFORM · v2.4</div>
+      </div>
+
+      <!-- Step 3–5: Barcode → Product -->
+      <div class="barcode-wrap" id="barcodeWrap" style="width:220px; height:80px;">
+        <!-- Barcode SVG -->
+        <svg id="barcodeSvg" class="barcode-svg" width="220" height="80" viewBox="0 0 220 80" xmlns="http://www.w3.org/2000/svg">
+          <!-- bars -->
+          <rect x="10"  y="4" width="3"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="16"  y="4" width="6"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="25"  y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="30"  y="4" width="5"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="38"  y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="43"  y="4" width="4"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="50"  y="4" width="3"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="56"  y="4" width="7"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="66"  y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="71"  y="4" width="4"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="78"  y="4" width="6"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="87"  y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="92"  y="4" width="5"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="100" y="4" width="3"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="106" y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="111" y="4" width="6"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="120" y="4" width="3"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="126" y="4" width="5"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="134" y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="139" y="4" width="4"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="146" y="4" width="7"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="156" y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="161" y="4" width="5"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="169" y="4" width="3"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="175" y="4" width="6"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="184" y="4" width="2"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="189" y="4" width="4"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="196" y="4" width="3"  height="72" fill="#00e5ff" opacity="0.9"/>
+          <rect x="202" y="4" width="6"  height="72" fill="#00e5ff" opacity="0.9"/>
+        </svg>
+
+        <!-- Laser -->
+        <div class="laser" id="laser"></div>
+
+        <!-- Product box icon (hidden until after scan) -->
+        <div class="product-icon" id="productIcon">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M32 4L58 18V46L32 60L6 46V18L32 4Z" stroke="#00e5ff" stroke-width="1.8" fill="rgba(0,229,255,0.06)"/>
+            <path d="M32 4L32 60" stroke="#00e5ff" stroke-width="1" stroke-dasharray="3 3" opacity="0.4"/>
+            <path d="M6 18L58 18" stroke="#00e5ff" stroke-width="1" stroke-dasharray="3 3" opacity="0.4"/>
+            <path d="M32 4L58 18" stroke="#2979ff" stroke-width="1.8"/>
+            <path d="M32 4L6 18"  stroke="#2979ff" stroke-width="1.8"/>
+            <circle cx="32" cy="32" r="4" fill="#00e5ff" opacity="0.8"/>
+            <path d="M18 25L32 32L46 25" stroke="#00e5ff" stroke-width="1" opacity="0.5"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Step 6: Cart -->
+      <div class="cart-area" id="cartArea">
+        <!-- Flying product clone -->
+        <div class="fly-item" id="flyItem">
+          <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M32 4L58 18V46L32 60L6 46V18L32 4Z" stroke="#00e5ff" stroke-width="2" fill="rgba(0,229,255,0.15)"/>
+          </svg>
+        </div>
+
+        <!-- Cart SVG -->
+        <svg class="cart-svg" width="120" height="72" viewBox="0 0 120 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- handle -->
+          <path d="M4 8H18L30 48H96L104 24H36" stroke="#2979ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- basket outline -->
+          <path d="M30 48H96" stroke="#2979ff" stroke-width="2.2" stroke-linecap="round"/>
+          <!-- wheels -->
+          <circle cx="42" cy="60" r="6" stroke="#00e5ff" stroke-width="2" fill="rgba(0,229,255,0.08)"/>
+          <circle cx="84" cy="60" r="6" stroke="#00e5ff" stroke-width="2" fill="rgba(0,229,255,0.08)"/>
+          <!-- item suggestions inside cart -->
+          <rect x="52" y="34" width="8"  height="10" rx="1" fill="rgba(0,229,255,0.18)" id="cartItem1" opacity="0"/>
+          <rect x="63" y="30" width="8"  height="14" rx="1" fill="rgba(41,121,255,0.22)" id="cartItem2" opacity="0"/>
+          <rect x="74" y="36" width="6"  height="8"  rx="1" fill="rgba(124,77,255,0.22)" id="cartItem3" opacity="0"/>
+        </svg>
+      </div>
+
+      <!-- Step 7: Progress -->
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-label">
+          <span>LOADING INVENTORY</span>
+          <span id="pctLabel">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <!-- Step 8: Ready -->
+      <div class="ready-text" id="readyText" style="position:relative;">
+        <div class="pulse-ring" id="pulseRing"></div>
+        <div class="ready-main">Smart Trolley Ready</div>
+        <div class="ready-sub">ENTERING MAIN INTERFACE &nbsp;→</div>
+      </div>
+
+    </div><!-- /stage -->
+  </div><!-- /preloader -->
+
+  <!-- MAIN CONTENT -->
+  <div id="main-content">
+    <div style="text-align:center; margin-bottom: 60px;">
+      <div style="font-family:'Rajdhani'; font-size:11px; letter-spacing:6px; color:rgba(0,229,255,0.6); margin-bottom:10px;">WELCOME TO</div>
+      <div class="hero-title">Smart Trolley</div>
+      <div class="hero-sub">Your intelligent shopping companion</div>
+    </div>
+    <div style="display:flex; gap:24px; flex-wrap:wrap; justify-content:center; max-width:800px;">
+      <div style="flex:1; min-width:180px; padding:28px 24px; background:rgba(0,229,255,0.04); border:1px solid rgba(0,229,255,0.12); border-radius:12px; text-align:center;">
+        <div style="font-family:'Orbitron'; font-size:0.75rem; letter-spacing:3px; color:var(--cyan); margin-bottom:10px;">SCAN</div>
+        <div style="font-size:0.9rem; color:rgba(232,244,255,0.55); line-height:1.6;">Instantly scan any barcode to identify & add products</div>
+      </div>
+      <div style="flex:1; min-width:180px; padding:28px 24px; background:rgba(41,121,255,0.04); border:1px solid rgba(41,121,255,0.12); border-radius:12px; text-align:center;">
+        <div style="font-family:'Orbitron'; font-size:0.75rem; letter-spacing:3px; color:var(--blue); margin-bottom:10px;">TRACK</div>
+        <div style="font-size:0.9rem; color:rgba(232,244,255,0.55); line-height:1.6;">Real-time cart tracking with live price totalling</div>
+      </div>
+      <div style="flex:1; min-width:180px; padding:28px 24px; background:rgba(124,77,255,0.04); border:1px solid rgba(124,77,255,0.12); border-radius:12px; text-align:center;">
+        <div style="font-family:'Orbitron'; font-size:0.75rem; letter-spacing:3px; color:var(--purple); margin-bottom:10px;">CHECKOUT</div>
+        <div style="font-size:0.9rem; color:rgba(232,244,255,0.55); line-height:1.6;">Skip the queue with seamless self-checkout</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== JAVASCRIPT ===================== -->
+  <script>
+    /**
+     * Smart Trolley — Intro Sequence Controller
+     * All timing is driven by this file; visual work lives in CSS.
+     */
+
+    const $ = id => document.getElementById(id);
+
+    const els = {
+      preloader:    $('preloader'),
+      corners:      document.querySelectorAll('.corner'),
+      titleBlock:   $('titleBlock'),
+      barcodeWrap:  $('barcodeWrap'),
+      barcodeSvg:   $('barcodeSvg'),
+      laser:        $('laser'),
+      productIcon:  $('productIcon'),
+      cartArea:     $('cartArea'),
+      flyItem:      $('flyItem'),
+      cartItem1:    $('cartItem1'),
+      cartItem2:    $('cartItem2'),
+      cartItem3:    $('cartItem3'),
+      progressWrap: $('progressWrap'),
+      progressFill: $('progressFill'),
+      pctLabel:     $('pctLabel'),
+      readyText:    $('readyText'),
+      pulseRing:    $('pulseRing'),
+      mainContent:  $('main-content'),
+    };
+
+    // Utility: show corners
+    function showCorners() {
+      els.corners.forEach(c => c.classList.add('visible'));
+    }
+
+    // Utility: animate percentage counter
+    function animatePct(from, to, duration, onUpdate, onDone) {
+      const start = performance.now();
+      function tick(now) {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // ease-in-out
+        const val = Math.round(from + eased * (to - from));
+        onUpdate(val);
+        if (t < 1) requestAnimationFrame(tick);
+        else onDone && onDone();
+      }
+      requestAnimationFrame(tick);
+    }
+
+    // ── SEQUENCE ─────────────────────────────────────────────
+    function runSequence() {
+
+      // Step 1 — blank slate (already dark bg) + corners slide in
+      delay(300, () => showCorners());
+
+      // Step 2 — Title fades in
+      delay(700, () => els.titleBlock.classList.add('visible'));
+
+      // Step 3 — Barcode appears
+      delay(1700, () => els.barcodeWrap.classList.add('visible'));
+
+      // Step 4 — Laser scans
+      delay(2400, () => els.laser.classList.add('scanning'));
+
+      // Step 5 — Barcode → Product icon
+      delay(3800, () => {
+        // fade out barcode bars, show box
+        els.barcodeSvg.style.transition = 'opacity 0.4s ease';
+        els.barcodeSvg.style.opacity    = '0';
+        setTimeout(() => els.productIcon.classList.add('visible'), 200);
+      });
+
+      // Step 6 — Cart appears + product flies in
+      delay(4600, () => {
+        els.cartArea.classList.add('visible');
+        setTimeout(() => {
+          els.flyItem.classList.add('fly-animate');
+          // pop items into cart progressively
+          setTimeout(() => { els.cartItem1.style.transition = 'opacity 0.3s'; els.cartItem1.style.opacity = '1'; }, 400);
+          setTimeout(() => { els.cartItem2.style.transition = 'opacity 0.3s'; els.cartItem2.style.opacity = '1'; }, 600);
+          setTimeout(() => { els.cartItem3.style.transition = 'opacity 0.3s'; els.cartItem3.style.opacity = '1'; }, 800);
+        }, 300);
+      });
+
+      // Step 7 — Progress bar fills
+      delay(5600, () => {
+        els.progressWrap.classList.add('visible');
+        setTimeout(() => {
+          els.progressFill.classList.add('filled');
+          animatePct(0, 100, 1700, v => els.pctLabel.textContent = v + '%', null);
+        }, 100);
+      });
+
+      // Step 8 — "Smart Trolley Ready"
+      delay(7600, () => {
+        els.readyText.classList.add('visible');
+        setTimeout(() => els.pulseRing.classList.add('active'), 400);
+      });
+
+      // Step 9 — Fade out preloader, reveal main content
+      delay(9200, () => {
+        els.preloader.classList.add('fade-out');
+        els.mainContent.style.display = 'flex';
+        setTimeout(() => els.mainContent.classList.add('visible'), 100);
+        // clean up from DOM after transition
+        setTimeout(() => els.preloader.style.display = 'none', 1200);
+      });
+    }
+
+    function delay(ms, fn) { setTimeout(fn, ms); }
+
+    // Kick off when DOM is ready
+    document.addEventListener('DOMContentLoaded', runSequence);
+  </script>
+</body>
+</html>

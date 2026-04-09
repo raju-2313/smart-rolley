@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Receipt</title>
+
+<style>
+
+body{
+font-family: monospace;
+width:220px;
+margin:0;
+padding:10px;
+}
+
+hr{
+border:0;
+border-top:1px dashed black;
+}
+
+.center{
+text-align:center;
+}
+
+@media print{
+body{
+width:220px;
+
+}
+}
+
+</style>
+
+</head>
+<body>
+
+<div id="receipt"></div>
+
+<script>
+
+    const bill = JSON.parse(localStorage.getItem("currentBill"));
+
+    let html = `
+    <div class="center"><b>SMART TROLLEY</b></div>
+    <hr>
+    Bill: ${bill.billId}<br>
+    ${bill.date}
+    <hr>
+    `;
+
+    bill.items.forEach(item=>{
+    html += `
+    ${item.name}<br>
+    ${item.quantity} x ₹${item.price} = ₹${item.total}<br>
+    `;
+    });
+
+    html += `
+    <hr>
+    <b>TOTAL: ₹${bill.total}</b><br>
+    PAYMENT: ${bill.paymentMode}
+    <hr>
+    Thank You
+    `;
+
+    document.getElementById("receipt").innerHTML = html;
+
+    setTimeout(()=>{
+    window.print();
+    },500);
+
+    window.onafterprint = function(){
+    localStorage.removeItem("currentBill");
+    window.location.href = "billing.html";
+    };
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Smart Trolley | Billing</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="css/style.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+        <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet" />
+
+<!-- ===== ROBOT ASSISTANT ENHANCEMENTS ===== -->
+    <style>
+        /* ── Keyframes ───────────────────────────────────────── */
+
+    @keyframes robotFloat {
+        0%, 100% { transform: translateY(0px); }
+        50%       { transform: translateY(-12px); }
+    }
+
+    model-viewer {
+        --progress-bar-height: 0px;
+    }
+
+        @keyframes robotBounce {
+            0%   { transform: translateY(0px)  scale(1); }
+            25%  { transform: translateY(-20px) scale(1.05); }
+            50%  { transform: translateY(-5px)  scale(0.97); }
+            75%  { transform: translateY(-12px) scale(1.02); }
+            100% { transform: translateY(0px)  scale(1); }
+        }
+
+        @keyframes robotCheckoutLean {
+            0%   { transform: rotate(0deg); }
+            40%  { transform: rotate(-12deg) translateX(-10px); }
+            70%  { transform: rotate(-8deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        /* Micro-idle movements */
+        @keyframes robotTilt {
+            0%   { transform: rotate(0deg); }
+            30%  { transform: rotate(4deg) translateY(-4px); }
+            60%  { transform: rotate(-3deg); }
+            100% { transform: rotate(0deg); }
+        }
+        @keyframes robotNod {
+            0%   { transform: translateY(0px) scale(1); }
+            40%  { transform: translateY(-8px) scale(1.03); }
+            100% { transform: translateY(0px) scale(1); }
+        }
+        @keyframes robotSpin {
+            0%   { transform: rotateY(0deg); }
+            50%  { transform: rotateY(20deg); }
+            100% { transform: rotateY(0deg); }
+        }
+
+        /* Thinking glow */
+        @keyframes robotGlow {
+            0%, 100% { filter: brightness(1)   drop-shadow(0 0 0px #4fc3f7); }
+            50%       { filter: brightness(1.3) drop-shadow(0 0 12px #4fc3f7); }
+        }
+
+        /* ── Robot element ───────────────────────────────────── */
+        model-viewer {
+            width:  clamp(140px, 20vw, 260px) !important;
+            height: clamp(140px, 20vw, 260px) !important;
+            position: fixed !important;
+            bottom: 20px !important;
+            left:   clamp(10px, 3vw, 50px) !important;
+            right:  unset !important;
+            background: transparent !important;
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            animation: robotFloat 3.2s ease-in-out infinite;
+            z-index: 1000;
+        }
+
+        model-viewer.bounce        { animation: robotBounce      0.55s ease        forwards; }
+        model-viewer.checkout-lean { animation: robotCheckoutLean 0.9s ease        forwards; }
+        model-viewer.micro-tilt    { animation: robotTilt          0.8s ease-in-out forwards; }
+        model-viewer.micro-nod     { animation: robotNod           0.6s ease-in-out forwards; }
+        model-viewer.micro-spin    { animation: robotSpin          0.9s ease-in-out forwards; }
+        model-viewer.thinking      { animation: robotGlow          1.2s ease-in-out 2; }
+
+        /* ── Speech bubble ───────────────────────────────────── */
+        #robotBubble {
+            position: fixed;
+            bottom: clamp(155px, calc(20vw + 15px), 278px);
+            left:   clamp(10px, 3vw, 50px);
+            right:  unset;
+            background: #fff;
+            color: #222;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: clamp(11px, 1.4vw, 13px);
+            font-weight: 600;
+            padding: 7px 13px;
+            border-radius: 14px 14px 4px 14px;
+            box-shadow: 0 3px 14px rgba(0,0,0,0.18);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.35s ease;
+            white-space: nowrap;
+            z-index: 9999;
+            border: 1.5px solid #e0e0e0;
+            max-width: clamp(160px, 28vw, 240px);
+            white-space: normal;
+            line-height: 1.3;
+        }
+        #robotBubble.visible  { opacity: 1; }
+        #robotBubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 18px;
+            border: 5px solid transparent;
+            border-top-color: #fff;
+        }
+
+        /* ── Robot states when chat is active ────────────── */
+        model-viewer.listening {
+            animation: robotGlow 0.8s ease-in-out infinite;
+        }
+        model-viewer.panel-open {
+            animation: robotCheckoutLean 0.9s ease forwards;
+        }
+
+        /* ══ CHATBOT POPUP ══════════════════════════════════ */
+
+        #chatBackdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 1100;
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+        }
+        #chatBackdrop.open { display: block; }
+
+        #chatPopup {
+            position: fixed;
+            bottom: clamp(180px, calc(20vw + 40px), 310px);
+            left:   clamp(10px, 3vw, 60px);
+            width:  clamp(260px, 80vw, 340px);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            background: rgba(10, 20, 35, 0.97);
+            border: 1px solid rgba(79, 195, 247, 0.35);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(79,195,247,0.1), inset 0 1px 0 rgba(255,255,255,0.05);
+            z-index: 1200;
+            font-family: 'Rajdhani', sans-serif;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(16px) scale(0.95);
+            pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        #chatPopup.open {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: all;
+        }
+
+        #chatHeader {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px 10px;
+            background: linear-gradient(135deg, rgba(79,195,247,0.12) 0%, rgba(15,30,50,0) 100%);
+            border-bottom: 1px solid rgba(79,195,247,0.15);
+            flex-shrink: 0;
+        }
+        #chatHeaderLeft {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #chatAvatar {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, #0d3a5c, #1a6a9a);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            border: 1.5px solid rgba(79,195,247,0.4);
+            flex-shrink: 0;
+        }
+        #chatTitle {
+            color: #e0f4ff;
+            font-size: clamp(13px, 2vw, 15px);
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            line-height: 1;
+        }
+        #chatStatus {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 3px;
+        }
+        #chatStatusDot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: #4ade80;
+            display: inline-block;
+            transition: background 0.3s;
+        }
+        #chatStatusText {
+            color: #7ab8d4;
+            font-size: 11px;
+        }
+        #chatClose {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #7ab8d4;
+            width: 28px; height: 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s, color 0.2s;
+            flex-shrink: 0;
+        }
+        #chatClose:hover { background: rgba(79,195,247,0.15); color: #fff; }
+
+        #chatMessages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px 12px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(79,195,247,0.2) transparent;
+        }
+        #chatMessages::-webkit-scrollbar { width: 4px; }
+        #chatMessages::-webkit-scrollbar-thumb { background: rgba(79,195,247,0.25); border-radius: 4px; }
+
+        .chat-msg { display: flex; }
+        .chat-msg.bot { justify-content: flex-start; }
+
+        .chat-bubble {
+            background: rgba(79,195,247,0.1);
+            border: 1px solid rgba(79,195,247,0.2);
+            color: #d4edf8;
+            font-size: clamp(12px, 1.7vw, 13.5px);
+            font-weight: 500;
+            padding: 9px 13px;
+            border-radius: 4px 14px 14px 14px;
+            line-height: 1.45;
+            max-width: 92%;
+        }
+        .chat-bubble.typing {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 11px 14px;
+        }
+        .chat-bubble.typing span {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #4fc3f7;
+            animation: typingDot 1s ease-in-out infinite;
+        }
+        .chat-bubble.typing span:nth-child(2) { animation-delay: 0.15s; }
+        .chat-bubble.typing span:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes typingDot {
+            0%,80%,100% { transform: scale(1);   opacity: 0.4; }
+            40%          { transform: scale(1.4); opacity: 1; }
+        }
+
+        #quickReplies {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            padding: 10px 12px;
+            border-top: 1px solid rgba(79,195,247,0.12);
+            border-bottom: 1px solid rgba(79,195,247,0.12);
+            background: rgba(0,0,0,0.15);
+            flex-shrink: 0;
+        }
+        .qr-btn {
+            background: rgba(79,195,247,0.08);
+            border: 1px solid rgba(79,195,247,0.25);
+            color: #b8dff2;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: clamp(11px, 1.5vw, 12.5px);
+            font-weight: 600;
+            padding: 7px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.15s;
+            white-space: nowrap;
+        }
+        .qr-btn:hover, .qr-btn:active {
+            background: rgba(79,195,247,0.22);
+            border-color: #4fc3f7;
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        #chatInputBar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px 12px;
+            border-top: 1px solid rgba(79,195,247,0.1);
+            background: rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+        #chatMicBtn {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0d3a5c, #1a6a9a);
+            border: 1.5px solid rgba(79,195,247,0.4);
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+            flex-shrink: 0;
+        }
+        #chatMicBtn:hover { background: linear-gradient(135deg, #1a5a8c, #2a8ac4); transform: scale(1.08); }
+        #chatMicBtn.active {
+            background: linear-gradient(135deg, #7c3aed, #a855f7);
+            box-shadow: 0 0 12px rgba(168,85,247,0.5);
+            animation: micPulse 0.9s ease-in-out infinite;
+        }
+        @keyframes micPulse {
+            0%,100% { box-shadow: 0 0 8px  rgba(168,85,247,0.4); }
+            50%      { box-shadow: 0 0 20px rgba(168,85,247,0.7); }
+        }
+        #chatInputHint {
+            color: rgba(120,170,195,0.6);
+            font-size: 11px;
+            font-style: italic;
+        }
+
+        /* ══ WALKTHROUGH OVERLAY ════════════════════════════ */
+        #walkthroughOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(5,12,20,0.93);
+            z-index: 1300;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        #walkthroughOverlay.open { display: flex; }
+
+        #walkthroughBox {
+            background: rgba(10,20,35,0.98);
+            border: 1.5px solid rgba(79,195,247,0.35);
+            border-radius: 20px;
+            padding: 28px 22px 22px;
+            max-width: 360px;
+            width: 100%;
+            text-align: center;
+            font-family: 'Rajdhani', sans-serif;
+            box-shadow: 0 0 50px rgba(79,195,247,0.15);
+        }
+        #walkthroughBox h3 {
+            color: #4fc3f7;
+            margin: 0 0 18px;
+            font-size: clamp(15px, 2.5vw, 18px);
+            letter-spacing: 0.5px;
+        }
+        .wt-step {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 11px 0;
+            border-bottom: 1px solid rgba(79,195,247,0.08);
+            opacity: 0;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            transform: translateX(-10px);
+        }
+        .wt-step:last-of-type { border-bottom: none; }
+        .wt-step.active  { opacity: 1;   transform: translateX(0); }
+        .wt-step.done    { opacity: 0.55; transform: translateX(0); }
+        .wt-num {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: rgba(79,195,247,0.08);
+            border: 2px solid rgba(79,195,247,0.4);
+            color: #4fc3f7;
+            font-size: 14px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.3s, color 0.3s;
+        }
+        .wt-step.active .wt-num { background: #4fc3f7; color: #0a1423; }
+        .wt-text {
+            color: #c8e6f5;
+            font-size: clamp(13px, 2vw, 15px);
+            font-weight: 600;
+            text-align: left;
+            line-height: 1.3;
+        }
+        #walkthroughClose {
+            margin-top: 20px;
+            background: linear-gradient(135deg, #0d5a8c, #1a8ac4);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 32px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 14px; font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        #walkthroughClose:hover { opacity: 0.88; transform: translateY(-1px); }
+    </style>
+    </head>
+    
+<body>
+    <div id="syncStatus" style="text-align: center;font-size: 12px;"></div>
+        
+    <div class="header">
+        <h1>🛒 Smart Trolley</h1>
+        <p class="tagline">Scan • Shop • Checkout Seamlessly</p>
+    </div>
+
+    <div class="nav">
+        <a href="index.html">Home</a>
+        <a href="billing.html" class="active">Billing</a>
+        <a href="contact.html">Contact Us</a>
+        <a href="store-map.html">Store Map</a>
+        <a href="admin-login.html">Admin</a>   
+        <a href="staff-login.html">Staff</a>     
+    </div>
+    
+<div class="notice-bar notranslate" translate="no">
+  <div class="notice-track">
+    <span>
+      ⚠ Kindly Restart System before starting the scanning process |
+      ⚠ कृपया स्कॅनिंग सुरू करण्यापूर्वी प्रणाली रीस्टार्ट करा |
+      ⚠ कृपया स्कैनिंग शुरू करने से पहले सिस्टम को रीस्टार्ट करें |
+    </span>
+    <span>
+      ⚠ Kindly Restart System before starting the scanning process |
+      ⚠ कृपया स्कॅनिंग सुरू करण्यापूर्वी प्रणाली रीस्टार्ट करा |
+      ⚠ कृपया स्कैनिंग शुरू करने से पहले सिस्टम को रीस्टार्ट करें |
+    </span>
+  </div>
+</div>
+
+    <div class="container1" >
+
+        <div id="activityTimerBox">
+            <span class="timer-label" >Activity Timer:</span>
+            <span id="activityTimer">00:00:00</span>
+        </div>
+
+        <!-- CHECKOUT LOCK BANNER -->
+        <div id="lockBanner" style="
+            display:none;
+            align-items:center;
+            justify-content:center;
+            gap:10px;
+            background:rgba(220,53,69,0.92);
+            color:#fff;
+            font-family:'Rajdhani',sans-serif;
+            font-size:1rem;
+            font-weight:700;
+            letter-spacing:0.04em;
+            padding:12px 18px;
+            border-radius:10px;
+            margin-bottom:10px;
+            box-shadow:0 4px 18px rgba(220,53,69,0.35);
+            position:sticky;
+            top:4px;
+            z-index:50;
+        ">
+            🔒 Trolley is locked. No changes allowed after checkout.
+        </div>
+
+        <h2>Your Bill</h2>
+
+        <div class="table-wrapper">
+            <table id="cartTable">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Qty</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="cartBody"></tbody>
+            </table>
+        </div>
+
+        <div id="suggestionSection" style="display: none;">
+            <h3>You may also like this</h3>
+            <div id = "suggetionList"></div>
+        </div>
+
+        <div id="total">
+            Total: ₹0.00
+        </div>
+
+        <button id="checkoutBtn">Checkout</button>
+
+
+        <div id="paymentSection" style="display:none;">
+            <h3>Select Payment Method</h3>
+            <button id="onlineBtn">Online Payment</button>
+            <button id="offlineBtn">Pay at Counter</button>
+        </div>
+
+        <div id="qrSection" style="display:none;">
+            <h3>Scan to Pay</h3>
+            <img src="images/qr.jpeg">
+        </div>
+
+        <div id="counterSection" style="display:none;">
+            <h3 id="counterMessage"></h3>
+        </div>
+
+        <button id="finishBtn" style="display:none;">Finish Transaction</button>
+
+        <div id="customModal" class="modal">
+            <div class="modal-content">
+                <p id="modalMessage"></p>
+            </div>
+        </div>
+    </div>
+    <div>
+        <h3 style="text-align: center;font-size:1rem;">Before starting the scanning process once tap on the screen and tap on the icon shown below & Tap the robbot to acess it</h3>
+        <img src="images/logo.jpeg" height="50rem" style="border-radius: 10px;margin-left: 45%;margin-top: 16px;">
+    </div>
+    <model-viewer
+        src="models/robot.glb"
+        disable-zoom
+        interaction-prompt="none"
+        style="position:fixed; bottom:20px; right:50px; width:240px; height:240px; background:transparent;"
+    ></model-viewer>
+
+    <button onclick="location.reload()" style="position:absolute; bottom:10px;right:10px;background-color: black;color: white;border: 1px solid white;">Restart system</button>  
+   
+    <div id="offlineIndicator" style="display: none;background: red;color: white;text-align: center;padding: 5px;">You are offline , Bills will sync automatically</div>
+
+    <input type="text" id="scannerInput" style="position:absolute; left:-9999px;" autofocus>
+
+    <input type="text" id="manualBarcode" placeholder="Enter Barcode" style="display: none;">
+
+    <button id="manualAddBtn" type="button" style="display: none;">Add</button>
+
+    <div id="google_translate_element" style="display:none;"></div>
+
+    <div id="printArea"></div>
+    
+    <div id ="suggestionBox"></div>
+
+ 
+    <script>
+    function googleTranslateElementInit() {
+    new google.translate.TranslateElement(
+        {pageLanguage: 'en', autoDisplay: false},
+        'google_translate_element'
+    );
+    }
+    </script>
+
+    <script>
+
+        setInterval(function() {
+            const banner = document.querySelector(".goog-te-banner-frame");
+            if (banner) {
+                banner.style.display = "none";
+            }
+
+            document.body.style.top = "0px";
+        }, 500);
+        
+    </script>
+    
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <script src="js/products.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- ══════════════════════════════════════════════════
+         STAFF NOTIFICATION HELPER
+         Writes a row to staff_notifications in Supabase.
+         Uses the same supabaseClient created by app.js.
+         Works for both call-staff and trolley timer alerts.
+    ══════════════════════════════════════════════════════ -->
+    <script>
+    /**
+     * sendStaffNotification(type, message)
+     * type    : 'trolley' | 'restock' | 'admin'
+     * message : human-readable description
+     * Silently no-ops if supabaseClient is not ready.
+     */
+    window.sendStaffNotification = async function (type, message) {
+        try {
+            if (typeof supabaseClient === 'undefined') return;
+            const { error } = await supabaseClient
+                .from('staff_notifications')
+                .insert({ type, message, status: 'pending' });
+            if (error) console.warn('[StaffNotify] Insert error:', error.message);
+        } catch (err) {
+            console.warn('[StaffNotify] Unexpected error:', err);
+        }
+    };
+
+    // ── Hook for activity-timer trolley alerts ──────────
+    // app.js calls window.notifyStaff() when the trolley
+    // is inactive too long.  We wrap it here so the
+    // Supabase insert fires automatically alongside
+    // whatever app.js already does.
+    (function () {
+        function wrapNotifyStaff() {
+            const original = window.notifyStaff;
+            window.notifyStaff = function () {
+                // Build a message from the alert text if present
+                const alertEl = document.getElementById('alertText');
+                const msg = alertEl
+                    ? alertEl.textContent.trim()
+                    : 'A trolley has been inactive for too long.';
+
+                // Fire Supabase insert (non-blocking)
+                window.sendStaffNotification('trolley', msg);
+
+                // Run original app.js logic
+                if (typeof original === 'function') original();
+            };
+        }
+
+        // app.js may not have run yet — wait for it
+        if (typeof window.notifyStaff === 'function') {
+            wrapNotifyStaff();
+        } else {
+            window.addEventListener('load', function () {
+                // Give app.js one tick to register notifyStaff
+                setTimeout(wrapNotifyStaff, 0);
+            });
+        }
+    })();
+    </script>
+
+
+
+
+    <!-- Speech bubble for robot assistant -->
+    <div id="robotBubble"></div>
+
+    <!-- ══ CHATBOT POPUP ══ -->
+    <div id="chatBackdrop"></div>
+
+    <div id="chatPopup">
+        <!-- Header -->
+        <div id="chatHeader">
+            <div id="chatHeaderLeft">
+                <div id="chatAvatar">🤖</div>
+                <div>
+                    <div id="chatTitle">Smart Assistant</div>
+                    <div id="chatStatus"><span id="chatStatusDot"></span><span id="chatStatusText">Online</span></div>
+                </div>
+            </div>
+            <button id="chatClose">✕</button>
+        </div>
+
+        <!-- Message area -->
+        <div id="chatMessages">
+            <div class="chat-msg bot">
+                <div class="chat-bubble">👋 Hi! How can I help you today?</div>
+            </div>
+        </div>
+
+        <!-- Quick reply buttons — always visible -->
+        <div id="quickReplies">
+            <button class="qr-btn" data-action="remove-item">🗑️ Remove item help</button>
+            <button class="qr-btn" data-action="call-staff">👨‍💼 Call staff</button>
+            <button class="qr-btn" data-action="budget">💰 Show budget</button>
+            <button class="qr-btn" data-action="how-to-use">❓ How to use</button>
+        </div>
+
+        <!-- Input bar -->
+        <div id="chatInputBar">
+            <button id="chatMicBtn" title="Voice input">🎤</button>
+            <span id="chatInputHint">Double-tap the robot anytime</span>
+        </div>
+    </div>
+
+    <!-- ══ WALKTHROUGH OVERLAY ══ -->
+    <div id="walkthroughOverlay">
+        <div id="walkthroughBox">
+            <h3>📋 How to Use Smart Trolley</h3>
+            <div class="wt-step" data-step="0">
+                <div class="wt-num">1</div>
+                <div class="wt-text">Scan items with the barcode scanner 📦</div>
+            </div>
+            <div class="wt-step" data-step="1">
+                <div class="wt-num">2</div>
+                <div class="wt-text">Check your bill on this screen 🧾</div>
+            </div>
+            <div class="wt-step" data-step="2">
+                <div class="wt-num">3</div>
+                <div class="wt-text">Tap <strong>Checkout</strong> when done ✅</div>
+            </div>
+            <div class="wt-step" data-step="3">
+                <div class="wt-num">4</div>
+                <div class="wt-text">Pay using QR code or at counter 💳</div>
+            </div>
+            <button id="walkthroughClose">Got it!</button>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+    const robot  = document.querySelector('model-viewer');
+    const bubble = document.getElementById('robotBubble');
+    if (!robot || !bubble) return;
+
+    /* ── Rotating help messages ──────────────────────────── */
+    const helpMessages = [
+        'Need help? 🤖',
+        'Tap items to scan 📦',
+        'Checkout when you\'re ready 🧾',
+        'I\'m here if you need help!',
+        'Scan products to add them 🛒',
+        'Items in cart? Hit Checkout! ✅',
+        'Having trouble? Ask staff 🙋',
+        'All prices are updated live 💰',
+    ];
+    let helpIdx   = 0;
+    let helpTimer = null;
+
+    /* ── Speech bubble ───────────────────────────────────── */
+    let bubbleClearTimer = null;
+    let rotatingPaused   = false;   // pause rotation while priority msg shows
+
+    function showBubble(msg, duration = 2800, priority = false) {
+        bubble.textContent = msg;
+        bubble.classList.add('visible');
+        clearTimeout(bubbleClearTimer);
+        if (priority) rotatingPaused = true;
+        bubbleClearTimer = setTimeout(() => {
+        bubble.classList.remove('visible');
+        rotatingPaused = false;
+        }, duration);
+    }
+
+    function scheduleNextHelp() {
+        const delay = 8000 + Math.random() * 4000; // 8–12 s
+        clearTimeout(helpTimer);
+        helpTimer = setTimeout(() => {
+        if (!rotatingPaused) {
+            showBubble(helpMessages[helpIdx % helpMessages.length], 3200);
+            helpIdx++;
+        }
+        scheduleNextHelp();
+        }, delay);
+    }
+
+    /* ── Animation helpers ───────────────────────────────── */
+    const ANIM_CLASSES = ['bounce','checkout-lean','micro-tilt','micro-nod','micro-spin','thinking'];
+
+    function clearAnims() {
+        robot.classList.remove(...ANIM_CLASSES);
+        void robot.offsetWidth; // reflow
+    }
+
+    function playAnimation(cls, duration) {
+        clearAnims();
+        robot.classList.add(cls);
+        setTimeout(clearAnims, duration);
+    }
+
+    /* ── Welcome message on load ─────────────────────────── */
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+        showBubble('Welcome! Start scanning items 🛒', 3600, true);
+        }, 800);
+    });
+
+    /* ── Idle bubble (10–12 s inactivity) ───────────────── */
+    let idleTimer = null;
+
+    function resetIdleTimer() {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+        showBubble(helpMessages[helpIdx % helpMessages.length], 3500, false);
+        helpIdx++;
+        }, 10000 + Math.random() * 2000);
+    }
+
+    document.addEventListener('mousemove', resetIdleTimer, { passive: true });
+    document.addEventListener('keydown',   resetIdleTimer, { passive: true });
+    document.addEventListener('click',     resetIdleTimer, { passive: true });
+    document.addEventListener('touchstart',resetIdleTimer, { passive: true });
+    resetIdleTimer();
+    scheduleNextHelp();
+
+    /* ── Cursor / touch follow ───────────────────────────── */
+    // Inline style is kept separate from animation class transforms
+    // by using a CSS custom property so they don't fight each other.
+    let followRaf = null;
+
+    function applyFollow(clientX) {
+        cancelAnimationFrame(followRaf);
+        followRaf = requestAnimationFrame(() => {
+        const cx    = window.innerWidth / 2;
+        const dx    = (clientX - cx) / cx;      // –1 … +1
+        const shift = dx * 18;                  // max ±18 px
+        robot.style.setProperty('--rx', `${shift}px`);
+        });
+    }
+
+    document.addEventListener('mousemove', e => applyFollow(e.clientX), { passive: true });
+    document.addEventListener('touchmove', e => {
+        if (e.touches[0]) applyFollow(e.touches[0].clientX);
+    }, { passive: true });
+
+    // Apply the CSS variable via a tiny wrapper; keeps animations clean
+    // We inject a rule that uses the variable when no animation class is active
+    const sheet = document.createElement('style');
+    sheet.textContent = `
+        model-viewer:not(.bounce):not(.checkout-lean):not(.micro-tilt)
+                    :not(.micro-nod):not(.micro-spin):not(.thinking) {
+        transform: translateX(var(--rx, 0px)) translateY(0px);
+        }
+    `;
+    document.head.appendChild(sheet);
+
+    /* Reset --rx to 0 on any interaction so robot snaps back to neutral */
+    function resetFollowPosition() {
+        robot.style.setProperty('--rx', '0px');
+    }
+    document.addEventListener('click',      resetFollowPosition);
+    document.addEventListener('touchstart', resetFollowPosition, { passive: true });
+
+    /* ── Rotate toward click / touch ────────────────────── */
+    function rotateToward(clientX) {
+        const rect    = robot.getBoundingClientRect();
+        const robotCX = rect.left + rect.width / 2;
+        const dir     = clientX < robotCX ? 1 : -1;
+        clearAnims();
+        robot.style.setProperty('--rx', '0px');          // snap follow back to neutral
+        robot.style.transform = `rotate(${dir * 10}deg)`;
+        setTimeout(() => {
+        robot.style.transform = '';                    // smooth return via CSS transition
+        }, 700);
+    }
+
+    document.addEventListener('click',      e => rotateToward(e.clientX));
+    document.addEventListener('touchstart', e => {
+        if (e.touches[0]) rotateToward(e.touches[0].clientX);
+    }, { passive: true });
+
+    /* ── Item-added reaction ─────────────────────────────── */
+    const cartBody = document.getElementById('cartBody');
+    if (cartBody) {
+        let lastRowCount = 0;
+        const mo = new MutationObserver(() => {
+        const rows = cartBody.querySelectorAll('tr').length;
+        if (rows !== lastRowCount) {
+            // New row added — bounce + thinking glow
+            playAnimation('bounce', 560);
+            setTimeout(() => playAnimation('thinking', 1400), 600);
+            showBubble('Item added! 🛍️', 2800, true);
+            lastRowCount = rows;
+        } else {
+            // Quantity / price update only — just glow
+            clearAnims();
+            robot.classList.add('thinking');
+            setTimeout(clearAnims, 1400);
+        }
+        });
+        mo.observe(cartBody, { childList: true, subtree: true, characterData: true, attributes: true });
+        lastRowCount = cartBody.querySelectorAll('tr').length;
+    }
+
+    /* ── Checkout reaction ───────────────────────────────── */
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    checkoutBtn && checkoutBtn.addEventListener('click', () => {
+        playAnimation('checkout-lean', 950);
+        showBubble('Proceed to checkout ✅', 3200, true);
+    });
+
+    /* ── Payment method hints ────────────────────────────── */
+    const onlineBtn  = document.getElementById('onlineBtn');
+    const offlineBtn = document.getElementById('offlineBtn');
+    const finishBtn  = document.getElementById('finishBtn');
+
+    onlineBtn  && onlineBtn.addEventListener ('click', () => showBubble('Scan the QR to pay 📲', 3500, true));
+    offlineBtn && offlineBtn.addEventListener('click', () => showBubble('Head to the counter 🏪', 3500, true));
+    finishBtn  && finishBtn.addEventListener ('click', () => showBubble('Thank you! See you soon 👋', 3200, true));
+
+    /* ── Random micro-movements ──────────────────────────── */
+    const microAnims   = [
+        { cls: 'micro-tilt', dur: 800  },
+        { cls: 'micro-nod',  dur: 600  },
+        { cls: 'micro-spin', dur: 900  },
+    ];
+
+    function scheduleMicro() {
+        const delay = 15000 + Math.random() * 10000;   // 15–25 s
+        setTimeout(() => {
+        // Only fire when no priority anim is running
+        if (!robot.classList.contains('bounce') &&
+            !robot.classList.contains('checkout-lean') &&
+            !robot.classList.contains('thinking')) {
+            const pick = microAnims[Math.floor(Math.random() * microAnims.length)];
+            playAnimation(pick.cls, pick.dur);
+        }
+        scheduleMicro();
+        }, delay);
+    }
+    scheduleMicro();
+
+    /* ════════════════════════════════════════════════════════
+       CHATBOT POPUP — double-tap robot to open
+       ════════════════════════════════════════════════════════ */
+    (function() {
+        const popup      = document.getElementById('chatPopup');
+        const backdrop   = document.getElementById('chatBackdrop');
+        const messages   = document.getElementById('chatMessages');
+        const statusDot  = document.getElementById('chatStatusDot');
+        const statusText = document.getElementById('chatStatusText');
+        const micBtn     = document.getElementById('chatMicBtn');
+
+        if (!popup) return;
+
+        /* ══════════════════════════════════════════════
+           LANGUAGE STATE
+           Starts null — set during the language-select
+           phase each time the popup opens.
+        ══════════════════════════════════════════════ */
+        let LANG = null;   // 'en' | 'hi' | 'mr'
+
+        /* ── Per-language UI strings ── */
+        const UI = {
+            en: {
+                selectPrompt : '🌐 Please say your language:<br><b>English</b> / <b>Hindi</b> / <b>Marathi</b>',
+                listenHint   : '🎤 Listening for language...',
+                greeting     : '👋 Hi! How can I help you today?',
+                notUnderstood: "Sorry, I didn't catch that. Please try again 🔄",
+                tryButtons   : "I heard you! Try one of the quick buttons below 👇",
+                walkStart    : 'Starting the walkthrough for you... 📋',
+                happyShopping: 'Happy shopping! 🛒',
+                responses: {
+                    'remove-item': 'To remove an item, tap the ✕ button next to it in your cart 🗑️',
+                    'call-staff' : 'Staff has been notified! Someone will assist you shortly 👨‍💼',
+                    'how-to-use' : 'Starting the walkthrough for you... 📋',
+                },
+                budget: (amt) => `Your current total is <strong>${amt}</strong> 💰`,
+                useKeywords  : ['how do i use','how to use','how does this work'],
+                removeKw     : ['remove','delete'],
+                staffKw      : ['staff','help'],
+                budgetKw     : ['total','budget','amount'],
+            },
+            hi: {
+                selectPrompt : '🌐 कृपया अपनी भाषा बोलें:<br><b>English</b> / <b>Hindi</b> / <b>Marathi</b>',
+                listenHint   : '🎤 भाषा सुन रहा हूँ...',
+                greeting     : '👋 नमस्ते! मैं आपकी कैसे मदद कर सकता हूँ?',
+                notUnderstood: 'माफ़ करें, समझ नहीं आया। कृपया फिर से बोलें 🔄',
+                tryButtons   : 'सुन लिया! नीचे दिए बटन आज़माएँ 👇',
+                walkStart    : 'वॉकथ्रू शुरू हो रही है... 📋',
+                happyShopping: 'खुशी से खरीदारी करें! 🛒',
+                responses: {
+                    'remove-item': 'कोई आइटम हटाने के लिए उसके पास वाले ✕ बटन पर टैप करें 🗑️',
+                    'call-staff' : 'स्टाफ को सूचित कर दिया गया है। जल्द मदद मिलेगी 👨‍💼',
+                    'how-to-use' : 'वॉकथ्रू शुरू हो रही है... 📋',
+                },
+                budget: (amt) => `आपका कुल बिल है <strong>${amt}</strong> 💰`,
+                useKeywords  : ['kaise use','kaise kare','kaisa use','use karna','kaise chalate'],
+                removeKw     : ['hatao','nikalo','remove','delete'],
+                staffKw      : ['staff','madad','bulao','help'],
+                budgetKw     : ['total','kitna','budget','amount','paisa'],
+            },
+            mr: {
+                selectPrompt : '🌐 कृपया तुमची भाषा सांगा:<br><b>English</b> / <b>Hindi</b> / <b>Marathi</b>',
+                listenHint   : '🎤 भाषा ऐकत आहे...',
+                greeting     : '👋 नमस्कार! मी तुमची कशी मदत करू?',
+                notUnderstood: 'माफ करा, समजले नाही. कृपया पुन्हा सांगा 🔄',
+                tryButtons   : 'ऐकले! खालील बटणे वापरून पहा 👇',
+                walkStart    : 'वॉकथ्रू सुरू होत आहे... 📋',
+                happyShopping: 'आनंदाने खरेदी करा! 🛒',
+                responses: {
+                    'remove-item': 'वस्तू काढण्यासाठी तिच्या शेजारील ✕ बटणावर टॅप करा 🗑️',
+                    'call-staff' : 'कर्मचाऱ्यांना कळवले आहे. लवकरच मदत होईल 👨‍💼',
+                    'how-to-use' : 'वॉकथ्रू सुरू होत आहे... 📋',
+                },
+                budget: (amt) => `तुमचे एकूण बिल आहे <strong>${amt}</strong> 💰`,
+                useKeywords  : ['kasa vapar','kasa vaparavi','kase vaparat','kase use'],
+                removeKw     : ['kadha','remove','delete','hata'],
+                staffKw      : ['staff','madad','help','bulva'],
+                budgetKw     : ['total','budget','amount','kiti','paisa'],
+            },
+        };
+
+        /* ── Audio ── */
+        let curAudio = null;
+
+        function playVoice(file) {
+            try {
+                if (curAudio) { curAudio.pause(); curAudio.onended = null; curAudio = null; }
+                if (!LANG) return null;
+                curAudio = new Audio(`voices/${LANG}/${file}`);
+                curAudio.play().catch(() => {});
+                return curAudio;
+            } catch(e) { return null; }
+        }
+
+        function stopVoice() {
+            if (recognition) { try { recognition.stop(); } catch(e){} recognition = null; }
+            if (curAudio)    { curAudio.pause(); curAudio.onended = null; curAudio = null; }
+        }
+
+        /* ── UI helpers ── */
+        function addBotMsg(html) {
+            const wrap = document.createElement('div');
+            wrap.className = 'chat-msg bot';
+            wrap.innerHTML = `<div class="chat-bubble">${html}</div>`;
+            messages.appendChild(wrap);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function showTyping() {
+            const t = document.createElement('div');
+            t.className = 'chat-msg bot typing-wrap';
+            t.innerHTML = '<div class="chat-bubble typing"><span></span><span></span><span></span></div>';
+            messages.appendChild(t);
+            messages.scrollTop = messages.scrollHeight;
+            return t;
+        }
+
+        function setStatus(state) {
+            const labels = {
+                listening : { color: '#f59e0b', text: '🎤 Listening...' },
+                thinking  : { color: '#a78bfa', text: '⏳ Thinking...'  },
+                online    : { color: '#4ade80', text: 'Online'          },
+            };
+            const s = labels[state] || labels.online;
+            statusDot.style.background = s.color;
+            statusText.textContent     = s.text;
+            robot.classList.toggle('listening', state === 'listening');
+        }
+
+        /* ── Clear message area ── */
+        function clearMessages() {
+            messages.innerHTML = '';
+        }
+
+        /* ══════════════════════════════════════════════
+           PHASE 1 — LANGUAGE SELECTION
+           Robot speaks a trilingual prompt then listens.
+        ══════════════════════════════════════════════ */
+        let langListenTimer = null;
+
+        function startLanguageSelection() {
+            LANG = null;
+            clearMessages();
+
+            /* Show the prompt bubble */
+            addBotMsg('🌐 Please say your language:<br><b>English</b> / <b>Hindi</b> / <b>Marathi</b>');
+            setStatus('online');
+
+            /* Play the lang-select voice (stored in a shared /voices/ root or en folder) */
+            const audio = (() => {
+                try {
+                    const a = new Audio('voices/select-language.mp3');
+                    a.play().catch(() => {});
+                    return a;
+                } catch(e) { return null; }
+            })();
+
+            /* After audio ends (or 4s fallback) → start listening */
+            const listenAfterAudio = () => {
+                clearTimeout(langListenTimer);
+                listenForLanguage();
+            };
+
+            if (audio) {
+                audio.onended = listenAfterAudio;
+                langListenTimer = setTimeout(listenAfterAudio, 4000);
+            } else {
+                langListenTimer = setTimeout(listenAfterAudio, 800);
+            }
+        }
+
+        /* ── Listen for language keyword ── */
+        let recognition = null;
+
+        function listenForLanguage() {
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) {
+                /* No speech API — fall back to showing tap buttons */
+                showLangButtons();
+                return;
+            }
+
+            setStatus('listening');
+            statusText.textContent = '🎤 Listening for language...';
+
+            recognition = new SR();
+            recognition.lang           = 'en-IN';   // broad locale catches EN/HI/MR
+            recognition.continuous     = false;
+            recognition.interimResults = false;
+
+            recognition.onresult = (e) => {
+                const spoken = (e.results[0][0].transcript || '').toLowerCase().trim();
+                recognition = null;
+                setStatus('thinking');
+                detectLanguage(spoken);
+            };
+
+            recognition.onerror = () => {
+                recognition = null;
+                setStatus('online');
+                addBotMsg('Could not hear you. Please tap your language below 👇');
+                showLangButtons();
+            };
+
+            recognition.onend = () => { recognition = null; };
+
+            try { recognition.start(); } catch(e) { showLangButtons(); }
+        }
+
+        /* ── Detect spoken language ── */
+        function detectLanguage(spoken) {
+            const enKw = ['english','en','इंग्लिश','इंग्रजी'];
+            const hiKw = ['hindi','हिंदी','हिन्दी','hindi','hi'];
+            const mrKw = ['marathi','मराठी','mr','marathi'];
+
+            let detected = null;
+            if (enKw.some(k => spoken.includes(k)))      detected = 'en';
+            else if (hiKw.some(k => spoken.includes(k))) detected = 'hi';
+            else if (mrKw.some(k => spoken.includes(k))) detected = 'mr';
+
+            if (detected) {
+                setLanguage(detected);
+            } else {
+                addBotMsg("Sorry, I didn't catch that. Please tap your language 👇");
+                showLangButtons();
+            }
+        }
+
+        /* ── Fallback: show tap buttons for language ── */
+        function showLangButtons() {
+            const wrap = document.createElement('div');
+            wrap.id = 'langBtnWrap';
+            wrap.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;';
+            wrap.innerHTML = `
+                <button class="qr-btn" data-lang="en">🇬🇧 English</button>
+                <button class="qr-btn" data-lang="hi">🇮🇳 हिंदी</button>
+                <button class="qr-btn" data-lang="mr">🏠 मराठी</button>
+            `;
+            const msgWrap = document.createElement('div');
+            msgWrap.className = 'chat-msg bot';
+            msgWrap.appendChild(wrap);
+            messages.appendChild(msgWrap);
+            messages.scrollTop = messages.scrollHeight;
+
+            wrap.querySelectorAll('[data-lang]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setLanguage(btn.dataset.lang);
+                });
+            });
+        }
+
+        /* ── Confirm language and transition to main chat ── */
+        function setLanguage(lang) {
+            LANG = lang;
+            const labels = { en: '🇬🇧 English', hi: '🇮🇳 Hindi', mr: '🏠 Marathi' };
+            clearMessages();
+            addBotMsg(`${labels[lang]} selected ✅`);
+
+            const t = showTyping();
+            setTimeout(() => {
+                t.remove();
+                addBotMsg(UI[LANG].greeting);
+                playVoice('help.mp3');
+                showBubble(UI[LANG].greeting.replace(/<[^>]+>/g,''), 2500, true);
+                setStatus('online');
+            }, 700);
+        }
+
+        /* ══════════════════════════════════════════════
+           OPEN / CLOSE
+        ══════════════════════════════════════════════ */
+        function openChat() {
+            popup.classList.add('open');
+            backdrop.classList.add('open');
+            robot.classList.add('panel-open');
+            startLanguageSelection();
+        }
+
+        function closeChat() {
+            popup.classList.remove('open');
+            backdrop.classList.remove('open');
+            robot.classList.remove('panel-open');
+            robot.classList.remove('listening');
+            clearTimeout(langListenTimer);
+            stopVoice();
+            setStatus('online');
+            /* NOTE: LANG is intentionally kept here so openWalkthrough()
+               called right after closeChat() can still read the language.
+               Use resetChat() when you want a full reset (X button, backdrop). */
+        }
+
+        function resetChat() {
+            closeChat();
+            LANG = null;
+        }
+
+        document.getElementById('chatClose').addEventListener('click', resetChat);
+        backdrop.addEventListener('click', resetChat);
+
+        /* ══════════════════════════════════════════════
+           QUICK REPLY BUTTONS
+        ══════════════════════════════════════════════ */
+        document.querySelectorAll('.qr-btn').forEach(btn => {
+            if (btn.dataset.lang) return;   // lang buttons handled separately
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!LANG) return;
+                const key  = btn.dataset.action;
+                if (!key) return;
+
+                setStatus('thinking');
+                const typing = showTyping();
+
+                setTimeout(() => {
+                    typing.remove();
+                    let msg = '';
+
+                    if (key === 'budget') {
+                        const el  = document.getElementById('total');
+                        const amt = el ? el.textContent.replace('Total:','').trim() : '₹0.00';
+                        msg = UI[LANG].budget(amt);
+                    } else {
+                        msg = UI[LANG].responses[key] || '';
+                    }
+
+                    addBotMsg(msg);
+                    showBubble(msg.replace(/<[^>]+>/g,''), 3500, true);
+
+                    // ── NEW: notify staff panel via Supabase when customer calls staff ──
+                    if (key === 'call-staff') {
+                        const totalEl  = document.getElementById('total');
+                        const billAmt  = totalEl ? totalEl.textContent.replace('Total:','').trim() : '';
+                        const staffMsg = billAmt
+                            ? `Customer requested staff assistance. Current bill: ${billAmt}`
+                            : 'Customer requested staff assistance at the trolley.';
+                        if (typeof window.sendStaffNotification === 'function') {
+                            window.sendStaffNotification('trolley', staffMsg);
+                        }
+                    }
+
+                    if (key === 'how-to-use') {
+                        /* Do NOT call playVoice here — openWalkthrough handles all audio */
+                        closeChat();
+                        openWalkthrough();
+                    } else {
+                        playVoice(`${key}.mp3`);
+                        setStatus('online');
+                    }
+                }, 800);
+            });
+        });
+
+        /* ── Double-tap robot to open/close ── */
+        let lastTap = 0;
+        function handleDoubleTap(e) {
+            e.stopPropagation();
+            const now = Date.now();
+            if (now - lastTap < 380) {
+                popup.classList.contains('open') ? closeChat() : openChat();
+            }
+            lastTap = now;
+        }
+        robot.addEventListener('click',    handleDoubleTap);
+        robot.addEventListener('touchend', handleDoubleTap, { passive: true });
+
+        /* ── Mic button (after language selected) ── */
+        function startVoice() {
+            if (!LANG) return;
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) { addBotMsg('Voice input is not supported on this browser 😔'); return; }
+            recognition = new SR();
+            recognition.lang           = LANG === 'hi' ? 'hi-IN' : LANG === 'mr' ? 'mr-IN' : 'en-IN';
+            recognition.continuous     = false;
+            recognition.interimResults = false;
+            recognition.onstart  = () => { setStatus('listening'); micBtn.classList.add('active'); };
+            recognition.onresult = (e) => {
+                const t = (e.results[0][0].transcript || '').toLowerCase();
+                setStatus('thinking');
+                micBtn.classList.remove('active');
+                handleVoiceCmd(t);
+            };
+            recognition.onerror = () => { setStatus('online'); micBtn.classList.remove('active'); };
+            recognition.onend   = () => { recognition = null; setStatus('online'); micBtn.classList.remove('active'); };
+            try { recognition.start(); } catch(e) {}
+        }
+
+        function handleVoiceCmd(text) {
+            if (!LANG) return;
+            const u = UI[LANG];
+
+            if (u.useKeywords.some(p => text.includes(p))) {
+                addBotMsg(u.walkStart);
+                /* openWalkthrough handles all audio — don't call playVoice here */
+                closeChat();
+                openWalkthrough();
+                return;
+            }
+
+            let key = null;
+            if (u.removeKw.some(k => text.includes(k)))      key = 'remove-item';
+            else if (u.staffKw.some(k => text.includes(k)))  key = 'call-staff';
+            else if (u.budgetKw.some(k => text.includes(k))) key = 'budget';
+
+            if (key === 'budget') {
+                const el  = document.getElementById('total');
+                const amt = el ? el.textContent.replace('Total:','').trim() : '₹0.00';
+                const msg = u.budget(amt);
+                addBotMsg(msg);
+                showBubble(msg.replace(/<[^>]+>/g,''), 3500, true);
+                playVoice('budget.mp3');
+            } else if (key) {
+                const msg = u.responses[key];
+                addBotMsg(msg);
+                showBubble(msg, 3500, true);
+                // ── NEW: notify staff panel via Supabase on voice call-staff ──
+                if (key === 'call-staff') {
+                    const totalEl  = document.getElementById('total');
+                    const billAmt  = totalEl ? totalEl.textContent.replace('Total:','').trim() : '';
+                    const staffMsg = billAmt
+                        ? `Customer (voice) requested staff assistance. Bill: ${billAmt}`
+                        : 'Customer (voice) requested staff assistance at the trolley.';
+                    if (typeof window.sendStaffNotification === 'function') {
+                        window.sendStaffNotification('trolley', staffMsg);
+                    }
+                }
+                playVoice(`${key}.mp3`);
+            } else {
+                addBotMsg(u.tryButtons);
+            }
+            setStatus('online');
+        }
+
+        micBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!LANG) return;
+            recognition ? stopVoice() : startVoice();
+        });
+
+        /* ── Walkthrough overlay ── */
+        const wtOverlay = document.getElementById('walkthroughOverlay');
+        const wtSteps   = Array.from(document.querySelectorAll('.wt-step'));
+
+        /*  Sequence:
+            1. Overlay opens — all steps hidden (opacity:0 via CSS)
+            2. 200ms render delay, then walkthrough.mp3 plays
+            3. INTRO_GAP_MS pause after intro ends
+            4. Step 1 fades in  →  step1.mp3 plays
+            5. STEP_GAP_MS pause after step1 ends
+            6. Step 2 fades in  →  step2.mp3 plays
+            ... and so on until step 4
+            Walkthrough uses its OWN audio var (wtAudio) so closeChat()
+            calling stopVoice() cannot kill the intro mid-play.           */
+
+        const STEP_FILES       = ['step1.mp3', 'step2.mp3', 'step3.mp3', 'step4.mp3'];
+        const STEP_GAP_MS      = 700;    // pause between step audio ending and next step appearing
+        const INTRO_GAP_MS     = 800;    // pause after walkthrough.mp3 before step 1 appears
+        const STEP_FALLBACK_MS = 5000;   // fallback if audio missing/blocked
+
+        let wtFallbackTimer = null;
+        let wtAudio         = null;      // independent audio for walkthrough
+
+        function playWtVoice(file) {
+            try {
+                const lang = LANG || 'en';   // snapshot LANG now — never let it be null
+                if (wtAudio) { wtAudio.pause(); wtAudio.onended = null; wtAudio = null; }
+                wtAudio = new Audio(`voices/${lang}/${file}`);
+                wtAudio.play().catch(() => {});
+                return wtAudio;
+            } catch(e) { return null; }
+        }
+
+        function stopWtAudio() {
+            if (wtAudio) { wtAudio.pause(); wtAudio.onended = null; wtAudio = null; }
+            clearTimeout(wtFallbackTimer);
+        }
+
+        function activateStep(idx) {
+            clearTimeout(wtFallbackTimer);
+
+            /* Mark previous as done */
+            if (idx > 0) wtSteps[idx - 1].classList.add('done');
+
+            /* All steps complete */
+            if (idx >= wtSteps.length) return;
+
+            /* Reveal and highlight this step */
+            wtSteps[idx].classList.add('active');
+
+            /* Play this step's audio via the dedicated walkthrough player */
+            const audio = playWtVoice(STEP_FILES[idx]);
+
+            /* Fallback timer in case audio never fires onended */
+            wtFallbackTimer = setTimeout(() => scheduleNextStep(idx), STEP_FALLBACK_MS);
+
+            if (audio) {
+                audio.onended = () => {
+                    clearTimeout(wtFallbackTimer);
+                    scheduleNextStep(idx);
+                };
+            }
+        }
+
+        function scheduleNextStep(idx) {
+            wtFallbackTimer = setTimeout(() => activateStep(idx + 1), STEP_GAP_MS);
+        }
+
+        function openWalkthrough() {
+            wtOverlay.classList.add('open');
+
+            /* Reset all steps — CSS handles opacity:0 via the base .wt-step rule */
+            wtSteps.forEach(s => {
+                s.classList.remove('active', 'done');
+                s.style.opacity   = '';   // clear any leftover inline styles
+                s.style.transform = '';
+            });
+
+            stopWtAudio();
+
+            /* Small delay to let the overlay render before audio starts */
+            setTimeout(() => {
+                /* Play the intro narration via dedicated audio player */
+                const intro = playWtVoice('walkthrough.mp3');
+
+                /* After intro ends + INTRO_GAP_MS → reveal step 1 */
+                const startSteps = () => {
+                    clearTimeout(wtFallbackTimer);
+                    wtFallbackTimer = setTimeout(() => activateStep(0), INTRO_GAP_MS);
+                };
+
+                /* Fallback: if audio never loads/plays, start steps after 5s */
+                wtFallbackTimer = setTimeout(startSteps, 5000);
+
+                if (intro) {
+                    intro.onended = () => {
+                        clearTimeout(wtFallbackTimer);
+                        startSteps();
+                    };
+                }
+            }, 200);
+        }
+
+        document.getElementById('walkthroughClose').addEventListener('click', () => {
+            wtOverlay.classList.remove('open');
+            stopWtAudio();
+            wtSteps.forEach(s => {
+                s.classList.remove('active', 'done');
+                s.style.opacity   = '';
+                s.style.transform = '';
+            });
+            const msg = (LANG && UI[LANG]) ? UI[LANG].happyShopping : 'Happy shopping! 🛒';
+            showBubble(msg, 2500, true);
+            LANG = null;   // reset language AFTER we've used it for the message above
+        });
+    })();
+
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Trolley Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet" />
+    <link href="css/admin.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+
+    <style>
+    /* ══════════════════════════════════════════════════════
+       NOTIFY STAFF — button, modal, product list, toast
+    ══════════════════════════════════════════════════════ */
+
+    /* ── Header Notify button ─────────────────────────── */
+
+    /* ── Robot popup — urgent Staff Help button ──────────
+       Sits at the bottom of the action list with a red/
+       orange glow to distinguish it from the other actions.
+    ─────────────────────────────────────────────────────── */
+    .ar-btn--urgent {
+        border-color: rgba(248, 81, 73, 0.45) !important;
+        color: #ff6b6b !important;
+        margin-top: 4px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        padding-top: 10px !important;
+    }
+    .ar-btn--urgent:hover {
+        background: rgba(248, 81, 73, 0.12) !important;
+        border-color: rgba(248, 81, 73, 0.75) !important;
+        color: #ff4444 !important;
+        box-shadow: 0 0 14px rgba(248, 81, 73, 0.25);
+    }
+    </style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div class="banner">
+    <h2>⚡ Smart Trolley Admin</h2>
+
+    <!-- NEW: Notify Staff button -->
+    <button class="notify-staff-btn" onclick="nsOpen()">
+        <span class="ns-icon">🔔</span> NOTIFY STAFF
+    </button>
+
+    <div class="live-badge"><div class="live-dot"></div> LIVE</div>
+</div>
+
+<div class="page">
+
+    <!-- Summary Cards -->
+    <p class="section-title">Today's Overview</p>
+    <div class="summary">
+        <div class="card">
+            <strong>Total Revenue Today</strong>
+            <p><span id="totalRevenue">0</span></p>
+        </div>
+        <div class="card">
+            <strong>Total Customers Today</strong>
+            <p><span id="totalCustomers">0</span></p>
+        </div>
+        <div class="card">
+            <strong>Online Payments</strong>
+            <p><span id="onlinePayments">0</span></p>
+        </div>
+        <div class="card">
+            <strong>Offline Payments</strong>
+            <p><span id="offlinePayments">0</span></p>
+        </div>
+    </div>
+
+    <!-- Product Analytics -->
+    <p class="section-title">Product Analytics</p>
+    <div class="analytics-grid">
+
+        <!-- Pie Chart Panel -->
+        <div class="analytics-panel">
+            <div class="panel-title"><span class="icon">◉</span> Sales Distribution</div>
+            <div id="productPieChart">
+                <canvas id="pieChartCanvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Top Selling Products -->
+        <div class="analytics-panel">
+            <div class="panel-title"><span class="icon">▲</span> Top Selling Products</div>
+            <ul class="top-list" id="topSellingList">
+                <li class="empty-state">Loading...</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <!-- Orders Table -->
+    <p class="section-title">Transaction Log</p>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Bill ID</th>
+                    <th>Total Amount</th>
+                    <th>Payment Mode</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody id="ordersTableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="actions">
+        <button class="primary" onclick="downloadOrders()">⬇ Download Orders</button>
+        <button onclick="logout()">Logout</button>
+    </div>
+
+</div>
+
+<!-- ── ALERT OVERLAY ── -->
+<div id="alertOverlay" class="alert-overlay">
+    <div class="alert-modal">
+        <div class="alert-icon">⚠</div>
+        <h2>Trolley Inactive</h2>
+        <p id="alertText">Trolley 1 inactive for long time</p>
+        <div class="alert-actions">
+            <button class="notify-btn" onclick="notifyStaff()">Notify Staff</button>
+            <button class="close-btn" onclick="closeAlert()">Dismiss</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     NOTIFY STAFF — RESTOCK MODAL
+══════════════════════════════════════════════════════════ -->
+<div class="ns-overlay" id="nsOverlay" onclick="nsOverlayClick(event)">
+    <div class="ns-modal" id="nsModal">
+
+        <!-- Header -->
+        <div class="ns-header">
+            <div>
+                <div class="ns-title">🔔 PRODUCT RESTOCK NOTIFICATION</div>
+                <div class="ns-subtitle">Select products to notify staff for restocking.</div>
+            </div>
+            <button class="ns-x" onclick="nsClose()" title="Close">✕</button>
+        </div>
+
+        <!-- Select all -->
+        <div class="ns-select-all-bar">
+            <input type="checkbox" class="ns-cb" id="nsSelectAll" onchange="nsToggleAll(this)">
+            <label for="nsSelectAll">Select All</label>
+        </div>
+
+        <!-- Product list (populated by JS) -->
+        <div class="ns-list" id="nsProductList"></div>
+
+        <!-- Counter -->
+        <div class="ns-counter">
+            <span id="nsCount">0</span> product(s) selected
+        </div>
+
+        <!-- Footer -->
+        <div class="ns-footer">
+            <button class="ns-cancel" onclick="nsClose()">Cancel</button>
+            <button class="ns-send" id="nsSendBtn" onclick="nsSend()" disabled>SEND NOTIFICATION</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="ns-toast" id="nsToast">
+    <span class="ns-toast-icon">✅</span>
+    <span id="nsToastMsg">Staff notified for restocking.</span>
+</div>
+
+<!-- ── SCRIPTS ── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/products.js"></script>
+<script src="js/admin.js"></script>
+
+<script>
+    // ──────────────────────────────────────────────
+    // PRODUCT ANALYTICS — Pie Chart + Top Sellers
+    // ──────────────────────────────────────────────
+
+    let pieChartInstance = null;
+
+    const CHART_COLOURS = [
+        '#00c9ff','#7b5ea7','#3fb950','#d29922','#f78166',
+        '#79c0ff','#d2a8ff','#56d364','#e3b341','#ff7b72',
+        '#58a6ff','#bc8cff','#26cd4d','#cca700','#ffa657'
+    ];
+
+    async function updateProductAnalytics() {
+        try {
+            const { data: items, error } = await supabaseClient
+                .from('order_items')
+                .select('barcode, quantity');
+
+            if (error) throw error;
+
+            const totals = {};
+            (items || []).forEach(({ barcode, quantity }) => {
+                totals[barcode] = (totals[barcode] || 0) + (quantity || 1);
+            });
+
+            const enriched = Object.entries(totals).map(([barcode, qty]) => {
+                const product = (typeof products !== 'undefined')
+                    ? products.find(p => String(p.barcode) === String(barcode))
+                    : null;
+                return {
+                    name: product ? product.name : `#${barcode}`,
+                    qty
+                };
+            });
+
+            enriched.sort((a, b) => b.qty - a.qty);
+            renderPieChart(enriched);
+            renderTopSellers(enriched);
+
+        } catch (err) {
+            console.error('Analytics error:', err);
+        }
+    }
+
+    function renderPieChart(data) {
+        if (!data.length) return;
+
+        const labels  = data.map(d => d.name);
+        const values  = data.map(d => d.qty);
+        const colours = data.map((_, i) => CHART_COLOURS[i % CHART_COLOURS.length]);
+
+        const ctx = document.getElementById('pieChartCanvas').getContext('2d');
+
+        if (pieChartInstance) {
+            pieChartInstance.data.labels = labels;
+            pieChartInstance.data.datasets[0].data = values;
+            pieChartInstance.data.datasets[0].backgroundColor = colours;
+            pieChartInstance.update();
+            return;
+        }
+
+        pieChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colours,
+                    borderColor: '#0f1520',
+                    borderWidth: 3,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#8b949e',
+                            font: { family: 'Rajdhani', size: 12, weight: '600' },
+                            padding: 14,
+                            boxWidth: 12,
+                            boxHeight: 12
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.label}: ${ctx.parsed} sold`
+                        },
+                        backgroundColor: '#141d2b',
+                        titleColor: '#e6edf3',
+                        bodyColor: '#8b949e',
+                        borderColor: '#252e3d',
+                        borderWidth: 1
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+
+    function renderTopSellers(data) {
+        const top5 = data.slice(0, 5);
+        const list  = document.getElementById('topSellingList');
+
+        if (!top5.length) {
+            list.innerHTML = '<li class="empty-state">No sales data yet.</li>';
+            return;
+        }
+
+        const maxQty = top5[0].qty || 1;
+
+        list.innerHTML = top5.map((item, i) => {
+            const rankClass = `rank-${i + 1}`;
+            const barWidth  = Math.round((item.qty / maxQty) * 100);
+            return `
+                <li>
+                    <span class="top-rank ${rankClass}">${i + 1}</span>
+                    <span class="top-name">${item.name}</span>
+                    <div class="top-bar-wrap">
+                        <div class="top-bar" style="width:${barWidth}%"></div>
+                    </div>
+                    <span class="top-qty">${item.qty} sold</span>
+                </li>
+            `;
+        }).join('');
+    }
+
+    // ──────────────────────────────────────────────
+    // REAL-TIME LISTENER
+    // ──────────────────────────────────────────────
+    function setupRealtimeAnalytics() {
+        supabaseClient
+            .channel('orders')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'order_items' },
+                () => { updateProductAnalytics(); }
+            )
+            .subscribe();
+    }
+
+    // ──────────────────────────────────────────────
+    // INIT
+    // ──────────────────────────────────────────────
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            if (typeof supabaseClient !== 'undefined') {
+                updateProductAnalytics();
+                setupRealtimeAnalytics();
+            } else {
+                console.warn('supabaseClient not found — analytics disabled.');
+            }
+        }, 300);
+    });
+
+    // ──────────────────────────────────────────────
+    // BADGE STYLING HOOK
+    // ──────────────────────────────────────────────
+    function applyPaymentBadges() {
+        document.querySelectorAll('#ordersTableBody tr').forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells[2]) {
+                const mode = cells[2].textContent.trim().toLowerCase();
+                const cls  = mode === 'online' ? 'badge-online' : 'badge-offline';
+                cells[2].innerHTML = `<span class="badge ${cls}">${cells[2].textContent.trim()}</span>`;
+            }
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // STAFF NOTIFICATION HELPER
+    // Sends a row to the staff_notifications table in Supabase.
+    // Falls back silently if supabaseClient is not available yet.
+    // ──────────────────────────────────────────────────────────────────
+    async function sendStaffNotification(type, message) {
+        try {
+            if (typeof supabaseClient === 'undefined') return;
+            const { error } = await supabaseClient
+                .from('staff_notifications')
+                .insert({ type, message, status: 'pending' });
+            if (error) console.warn('[StaffNotify] Insert error:', error.message);
+        } catch (err) {
+            console.warn('[StaffNotify] Unexpected error:', err);
+        }
+    }
+</script>
+
+<!-- ── BILL MODAL (unchanged) ── -->
+<div id="billModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; z-index:2000;">
+    <div style="background:#0f1520; padding:20px; border-radius:10px; width:320px; max-height:400px; overflow:auto; border:1px solid #252e3d;">
+        <h3 style="margin-bottom:15px;">Bill Details</h3>
+        <div id="billItems"></div>
+        <button onclick="closeBill()" style="margin-top:15px;">Close</button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     ROBOT ASSISTANT
+══════════════════════════════════════════════════════════ -->
+<div class="ar-glow" aria-hidden="true"></div>
+
+<model-viewer
+    id="arRobot"
+    class="ar-robot"
+    src="models/robot.glb"
+    alt="Admin Robot Assistant"
+    auto-rotate
+    camera-controls
+    disable-zoom
+    rotation-per-second="0deg"
+    interaction-prompt="none"
+    ar-status="not-presenting"
+    title="Click to open assistant"
+    onclick="arToggle()">
+</model-viewer>
+
+<div class="ar-popup" id="arPopup" role="dialog" aria-label="Admin Assistant">
+    <div class="ar-head">
+        <div class="ar-head-dot"></div>
+        <span class="ar-head-title">ADMIN ASSISTANT</span>
+        <button class="ar-close" onclick="arClose()" title="Close">✕</button>
+    </div>
+    <div class="ar-bubble" id="arBubble">👋 Hi Admin! Tap a quick action below.</div>
+    <div class="ar-actions">
+        <button class="ar-btn" onclick="arAction('summary')">
+            <span class="ar-btn-icon">📊</span> Today's Summary
+        </button>
+        <button class="ar-btn" onclick="arAction('top')">
+            <span class="ar-btn-icon">🏆</span> Top Product Today
+        </button>
+        <button class="ar-btn" onclick="arAction('txn')">
+            <span class="ar-btn-icon">🧾</span> Latest Transactions
+        </button>
+        <button class="ar-btn" onclick="arAction('status')">
+            <span class="ar-btn-icon">🟢</span> System Status
+        </button>
+        <button class="ar-btn" onclick="arAction('help')">
+            <span class="ar-btn-icon">❓</span> Help
+        </button>
+        <!-- Staff Help — sends an admin-type notification to staff panel -->
+        <button class="ar-btn ar-btn--urgent" onclick="arAction('staffhelp')">
+            <span class="ar-btn-icon">🆘</span> Request Staff Help
+        </button>
+    </div>
+</div>
+
+<!-- Robot assistant logic -->
+<script>
+(function () {
+    const robot  = document.getElementById('arRobot');
+    const popup  = document.getElementById('arPopup');
+    const bubble = document.getElementById('arBubble');
+    let isOpen = false;
+
+    window.arToggle = function () { isOpen ? arClose() : arOpen(); };
+
+    function arOpen() {
+        isOpen = true;
+        popup.classList.add('visible');
+        robot.classList.add('open');
+    }
+
+    window.arClose = function () {
+        isOpen = false;
+        popup.classList.remove('visible');
+        robot.classList.remove('open');
+    };
+
+    document.addEventListener('click', function (e) {
+        if (isOpen && !popup.contains(e.target) && e.target !== robot) {
+            arClose();
+        }
+    });
+
+    function arRespond(text) {
+        bubble.textContent = '';
+        bubble.classList.add('flash');
+        robot.style.filter = 'drop-shadow(0 0 32px rgba(0,217,255,0.95))';
+        setTimeout(() => { robot.style.filter = ''; }, 800);
+        let i = 0;
+        const iv = setInterval(() => {
+            if (i < text.length) {
+                bubble.textContent += text[i++];
+            } else {
+                clearInterval(iv);
+                setTimeout(() => bubble.classList.remove('flash'), 600);
+            }
+        }, 18);
+    }
+
+    function domVal(id) {
+        const el = document.getElementById(id);
+        return el ? el.textContent.trim() : '—';
+    }
+
+    window.arAction = function (key) {
+        switch (key) {
+            case 'summary':
+                arRespond(
+                    `📊 Today's Summary\n` +
+                    `Revenue     : ${domVal('totalRevenue')}\n` +
+                    `Customers   : ${domVal('totalCustomers')}\n` +
+                    `Online Pay  : ${domVal('onlinePayments')}\n` +
+                    `Offline Pay : ${domVal('offlinePayments')}`
+                );
+                break;
+            case 'top': {
+                const name = document.querySelector('#topSellingList .top-name');
+                const qty  = document.querySelector('#topSellingList .top-qty');
+                arRespond(
+                    name
+                        ? `🏆 Top Product\n${name.textContent.trim()}\nSold: ${qty ? qty.textContent.trim() : '—'}`
+                        : '🏆 No sales data yet.\nProducts appear once orders come in.'
+                );
+                break;
+            }
+            case 'txn': {
+                const rows = Array.from(
+                    document.querySelectorAll('#ordersTableBody tr')
+                ).slice(-3).reverse();
+                if (!rows.length) { arRespond('🧾 No transactions recorded yet.'); break; }
+                let out = '🧾 Last 3 Transactions\n';
+                rows.forEach(row => {
+                    const c = row.querySelectorAll('td');
+                    if (c.length >= 3) {
+                        out += `#${c[0].textContent.trim().slice(0,8)}… ₹${c[1].textContent.trim()} (${c[2].textContent.trim()})\n`;
+                    }
+                });
+                arRespond(out.trimEnd());
+                break;
+            }
+            case 'status':
+                arRespond(
+                    document.querySelector('.live-dot')
+                        ? '🟢 System Status: LIVE\nAll services running normally.\nReal-time sync is active.'
+                        : '🔴 System Status: OFFLINE\nCould not detect live connection.\nCheck your network.'
+                );
+                break;
+            case 'help':
+                arRespond(
+                    '❓ Dashboard Guide\n' +
+                    '• Cards    — today\'s revenue & customers\n' +
+                    '• Pie Chart — product sales split\n' +
+                    '• Top List  — best sellers ranked\n' +
+                    '• Table     — full transaction log\n' +
+                    '• Download  — exports orders as CSV\n' +
+                    'Tap any row in the table to view the full bill.'
+                );
+                break;
+
+            case 'staffhelp': {
+                // Build a timestamped message and send it as an 'admin' notification
+                const now    = new Date();
+                const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                const msg    = `Admin requested staff assistance at ${timeStr}.`;
+
+                // Fire the Supabase insert (uses sendStaffNotification defined in the analytics script)
+                if (typeof sendStaffNotification === 'function') {
+                    sendStaffNotification('admin', msg)
+                        .then(() => {
+                            arRespond('🆘 Staff Help Sent!\nNotification delivered to staff panel.\n' + msg);
+                        })
+                        .catch(() => {
+                            arRespond('⚠ Could not reach Supabase.\nCheck your connection and try again.');
+                        });
+                } else {
+                    arRespond('⚠ Notification service not ready.\nPlease wait a moment and try again.');
+                }
+
+                // Give immediate visual feedback while async call runs
+                arRespond('🆘 Sending staff help request...');
+                break;
+            }
+
+            default:
+                arRespond('I didn\'t understand that action.');
+        }
+    };
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════
+     NOTIFY STAFF — RESTOCK SYSTEM LOGIC
+══════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+
+    /* ── Product catalogue ────────────────────────────── */
+    const NS_PRODUCTS = [
+        'Milk 1L',
+        'Bread',
+        'Butter',
+        'Pasta Sauce',
+        'Eggs (6 pcs)',
+        'Coffee Powder',
+        'Sugar 1kg',
+        'Potato Chips',
+        'Cold Drink 500ml'
+    ];
+
+    /* ── DOM refs ─────────────────────────────────────── */
+    const overlay   = document.getElementById('nsOverlay');
+    const listEl    = document.getElementById('nsProductList');
+    const countEl   = document.getElementById('nsCount');
+    const sendBtn   = document.getElementById('nsSendBtn');
+    const selectAll = document.getElementById('nsSelectAll');
+    const toast     = document.getElementById('nsToast');
+    const toastMsg  = document.getElementById('nsToastMsg');
+    let   toastTimer = null;
+
+    /* ── Build product rows once at load ──────────────── */
+    NS_PRODUCTS.forEach((name, idx) => {
+        const row = document.createElement('div');
+        row.className = 'ns-item';
+        row.innerHTML = `
+            <input type="checkbox" class="ns-cb ns-product-cb" id="nsCb${idx}" value="${name}">
+            <label class="ns-product-name" for="nsCb${idx}">${name}</label>
+            <span class="ns-tag">RESTOCK</span>
+        `;
+        row.addEventListener('click', function (e) {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
+                const cb = row.querySelector('.ns-product-cb');
+                cb.checked = !cb.checked;
+            }
+            setTimeout(() => {
+                row.classList.toggle('checked', row.querySelector('.ns-product-cb').checked);
+                nsUpdateCounter();
+            }, 0);
+        });
+        listEl.appendChild(row);
+    });
+
+    /* ── Update counter + send-btn disabled state ─────── */
+    function nsUpdateCounter() {
+        const checked = listEl.querySelectorAll('.ns-product-cb:checked').length;
+        const total   = NS_PRODUCTS.length;
+        countEl.textContent      = checked;
+        sendBtn.disabled         = checked === 0;
+        selectAll.checked        = checked === total;
+        selectAll.indeterminate  = checked > 0 && checked < total;
+    }
+
+    /* ── Select / deselect all ────────────────────────── */
+    window.nsToggleAll = function (cb) {
+        listEl.querySelectorAll('.ns-product-cb').forEach(c => {
+            c.checked = cb.checked;
+            c.closest('.ns-item').classList.toggle('checked', cb.checked);
+        });
+        nsUpdateCounter();
+    };
+
+    /* ── Open modal ───────────────────────────────────── */
+    window.nsOpen = function () {
+        overlay.classList.add('open');
+    };
+
+    /* ── Close modal ──────────────────────────────────── */
+    window.nsClose = function () {
+        overlay.classList.remove('open');
+    };
+
+    window.nsOverlayClick = function (e) {
+        if (e.target === overlay) nsClose();
+    };
+
+    /* ── Send notification ────────────────────────────── */
+    window.nsSend = function () {
+        const selected = Array.from(
+            listEl.querySelectorAll('.ns-product-cb:checked')
+        ).map(cb => cb.value);
+
+        if (!selected.length) return;
+
+        /* ── localStorage: restockTasks (merged, no duplicates) ── */
+        let existing = [];
+        try { existing = JSON.parse(localStorage.getItem('restockTasks') || '[]'); }
+        catch (_) { existing = []; }
+        const merged = Array.from(new Set([...existing, ...selected]));
+        localStorage.setItem('restockTasks', JSON.stringify(merged));
+
+        /* ── localStorage: restockLog (timestamped history) ── */
+        let log = [];
+        try { log = JSON.parse(localStorage.getItem('restockLog') || '[]'); }
+        catch (_) {}
+        log.unshift({
+            products:  selected,
+            timestamp: new Date().toISOString(),
+            count:     selected.length
+        });
+        localStorage.setItem('restockLog', JSON.stringify(log.slice(0, 50)));
+
+        // ── NEW: Send each selected product as a restock notification to Supabase ──
+        selected.forEach(product => {
+            sendStaffNotification('restock', `${product} needs restocking.`);
+        });
+
+        /* Close modal */
+        nsClose();
+
+        /* Reset all checkboxes for next time */
+        listEl.querySelectorAll('.ns-product-cb').forEach(c => {
+            c.checked = false;
+            c.closest('.ns-item').classList.remove('checked');
+        });
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+        nsUpdateCounter();
+
+        /* Show toast */
+        const noun = selected.length === 1 ? 'product' : 'products';
+        toastMsg.textContent = `✅  Staff notified for restocking ${selected.length} ${noun}.`;
+        toast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
+    };
+
+    /* Initialise counter */
+    nsUpdateCounter();
+
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════
+     ALERT OVERLAY — notifyStaff() with Supabase insert
+     This overrides the notifyStaff() defined in admin.js
+     so it also writes to staff_notifications.
+══════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+    // Wait for supabaseClient (initialised by admin.js) to be ready
+    function waitForSupabase(fn, retries) {
+        if (typeof supabaseClient !== 'undefined') { fn(); return; }
+        if (retries <= 0) return;
+        setTimeout(() => waitForSupabase(fn, retries - 1), 200);
+    }
+
+    waitForSupabase(function () {
+
+        // Wrap the existing notifyStaff so the original logic still runs
+        // AND a Supabase insert is fired.
+        const _originalNotifyStaff = window.notifyStaff;
+
+        window.notifyStaff = function () {
+            // Read the trolley ID from the alert text (e.g. "Trolley 3 inactive…")
+            const alertTextEl = document.getElementById('alertText');
+            const alertMsg    = alertTextEl
+                ? alertTextEl.textContent.trim()
+                : 'A trolley has been inactive for too long.';
+
+            // ── NEW: insert trolley alert into staff_notifications ──
+            sendStaffNotification('trolley', alertMsg);
+
+            // Run original admin.js notifyStaff logic if it exists
+            if (typeof _originalNotifyStaff === 'function') {
+                _originalNotifyStaff();
+            } else {
+                // Fallback: just close the overlay
+                const overlay = document.getElementById('alertOverlay');
+                if (overlay) overlay.style.display = 'none';
+            }
+        };
+
+    }, 20); // retry up to 20 times × 200ms = 4s
+})();
+</script>
+
+</body>
+</html>

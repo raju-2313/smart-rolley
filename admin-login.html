@@ -1,96 +1,260 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Admin Login</title>
+    <meta charset="UTF-8">
+    <title>Admin Login | Smart Trolley</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet"/>
     <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            height: 100vh;
+            font-family: 'Rajdhani', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(160deg, #060d1a 0%, #0b1a30 50%, #071224 100%);
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            justify-content: center;
+            overflow: hidden;
         }
 
-        .login-container {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            width: 320px;
+        /* ── animated grid background ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0,198,255,.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,198,255,.04) 1px, transparent 1px);
+            background-size: 44px 44px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── glow orbs ── */
+        body::after {
+            content: '';
+            position: fixed;
+            top: -120px; left: -120px;
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(0,123,255,.18) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .login-wrap {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 400px;
+            padding: 0 20px;
+        }
+
+        /* brand header */
+        .login-brand {
             text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            margin-bottom: 32px;
+        }
+        .login-brand .brand-icon {
+            font-size: 3rem;
+            line-height: 1;
+            margin-bottom: 10px;
+            filter: drop-shadow(0 0 18px rgba(0,198,255,.6));
+        }
+        .login-brand h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1.3rem, 4vw, 1.7rem);
+            font-weight: 900;
+            letter-spacing: .06em;
+            background: linear-gradient(90deg, #00c6ff, #7c4dff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .login-brand p {
+            font-size: .85rem;
+            color: rgba(220,240,255,.45);
+            letter-spacing: .08em;
+            margin-top: 4px;
+            text-transform: uppercase;
         }
 
-        .login-container h2 {
-            margin-bottom: 20px;
-            color: #2c5364;
+        /* card */
+        .login-card {
+            background: rgba(8, 18, 34, 0.88);
+            border: 1px solid rgba(0,198,255,.18);
+            border-radius: 20px;
+            padding: 36px 32px;
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,.04) inset,
+                0 0 80px rgba(0,198,255,.06),
+                0 20px 60px rgba(0,0,0,.55);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            position: relative;
+            overflow: hidden;
+        }
+        /* top glow line */
+        .login-card::before {
+            content: '';
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,198,255,.5), rgba(124,77,255,.4), transparent);
         }
 
-        .login-container input {
+        .card-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .14em;
+            color: rgba(220,240,255,.4);
+            text-transform: uppercase;
+            margin-bottom: 22px;
+        }
+        .card-label-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #dc3545;
+            box-shadow: 0 0 8px #dc3545;
+        }
+
+        .form-group { margin-bottom: 18px; }
+        .form-group label {
+            display: block;
+            font-size: .82rem;
+            font-weight: 600;
+            color: rgba(220,240,255,.65);
+            letter-spacing: .04em;
+            margin-bottom: 8px;
+        }
+        .form-group input {
             width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            font-size: 14px;
+            padding: 12px 16px;
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(0,198,255,.2);
+            border-radius: 10px;
+            color: #e8f4ff;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            outline: none;
+            transition: border-color .25s, box-shadow .25s;
         }
+        .form-group input:focus {
+            border-color: rgba(0,198,255,.6);
+            box-shadow: 0 0 0 3px rgba(0,198,255,.12);
+        }
+        .form-group input::placeholder { color: rgba(200,220,255,.25); }
 
-        .login-container button {
+        .login-btn {
             width: 100%;
-            padding: 12px;
-            margin-top: 15px;
+            padding: 14px;
+            margin-top: 8px;
+            background: linear-gradient(135deg, #007bff, #00c6ff);
             border: none;
-            border-radius: 8px;
-            background: #2c5364;
-            color: white;
-            font-size: 15px;
+            border-radius: 12px;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: .88rem;
+            font-weight: 700;
+            letter-spacing: .08em;
             cursor: pointer;
-            transition: 0.3s;
+            transition: opacity .2s, transform .15s, box-shadow .2s;
+            box-shadow: 0 4px 20px rgba(0,123,255,.35);
+        }
+        .login-btn:hover {
+            opacity: .9;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 28px rgba(0,123,255,.5);
+        }
+        .login-btn:active { transform: translateY(0); }
+
+        .error-msg {
+            margin-top: 14px;
+            padding: 10px 14px;
+            background: rgba(220,53,69,.12);
+            border: 1px solid rgba(220,53,69,.35);
+            border-radius: 8px;
+            color: #f9a8b0;
+            font-size: .85rem;
+            font-weight: 600;
+            text-align: center;
+            display: none;
         }
 
-        .login-container button:hover {
-            background: #203a43;
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: rgba(0,198,255,.6);
+            font-size: .84rem;
+            font-weight: 600;
+            text-decoration: none;
+            letter-spacing: .04em;
+            transition: color .2s;
         }
-
-        .error {
-            color: red;
-            font-size: 13px;
-            margin-top: 10px;
-        }
-
+        .back-link:hover { color: #00c6ff; }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet" />
 </head>
 <body>
+<div class="login-wrap">
 
-<div class="login-container">
-    <h2>Smart Trolley Admin</h2>
+    <div class="login-brand">
+        <div class="brand-icon">🛒</div>
+        <h1>Smart Trolley</h1>
+        <p>Admin Access Portal</p>
+    </div>
 
-    <input type="password" id="adminPass" placeholder="Enter Password">
+    <div class="login-card">
+        <div class="card-label">
+            <span class="card-label-dot"></span>
+            Administrator Login
+        </div>
 
-    <button onclick="checkLogin()">Login</button>
+        <div class="form-group">
+            <label for="adminPass">Admin Password</label>
+            <input type="password" id="adminPass" placeholder="Enter admin password" autocomplete="current-password" />
+        </div>
 
-    <div id="errorMsg" class="error"></div>
+        <button class="login-btn" onclick="checkLogin()" id="loginBtn">
+            ACCESS DASHBOARD
+        </button>
+
+        <div class="error-msg" id="errorMsg">
+            ⚠ Incorrect password. Please try again.
+        </div>
+    </div>
+
+    <a href="index.html" class="back-link">← Back to Home</a>
 </div>
 
 <script>
+    // Allow Enter key
+    document.getElementById('adminPass').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') checkLogin();
+    });
 
-function checkLogin() {
+    function checkLogin() {
+        const password = "Smart@123";
+        const entered  = document.getElementById("adminPass").value;
+        const errEl    = document.getElementById("errorMsg");
+        const btn      = document.getElementById("loginBtn");
 
-    const password = "Smart@123";
-    const entered = document.getElementById("adminPass").value;
-
-    if (entered === password) {
-        sessionStorage.setItem("adminLoggedIn", "true");
-        window.location.href = "admin.html";
-    } else {
-        document.getElementById("errorMsg").innerText = "Incorrect Password";
+        if (entered === password) {
+            sessionStorage.setItem("adminLoggedIn", "true");
+            btn.textContent = "LOADING…";
+            btn.style.opacity = ".7";
+            setTimeout(() => { window.location.href = "admin.html"; }, 300);
+        } else {
+            errEl.style.display = "block";
+            document.getElementById("adminPass").value = "";
+            document.getElementById("adminPass").focus();
+        }
     }
-}
-
 </script>
-
 </body>
 </html>

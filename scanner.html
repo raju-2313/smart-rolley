@@ -1,77 +1,467 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <title>Scanner | Smart Trolley</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet"/>
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- ZXing camera barcode reader -->
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <!-- Supabase (needed to forward scans to billing.html) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-<script src="https://unpkg.com/@zxing/library@latest"></script>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet" />
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            min-height: 100vh;
+            background: #060d1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+        }
 
-<style>
+        /* Grid BG */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0,198,255,.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,198,255,.04) 1px, transparent 1px);
+            background-size: 44px 44px;
+            pointer-events: none;
+            z-index: 0;
+        }
 
-body{
- background:black;
- color:white;
- text-align:center;
- font-family:Arial;
-}
+        /* ── Header ── */
+        .scanner-header {
+            width: 100%;
+            background: linear-gradient(135deg,#007bff,#00c6ff);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            z-index: 10;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0,123,255,.35);
+        }
+        .scanner-header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: #fff;
+            letter-spacing: .08em;
+        }
+        .scanner-header .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,.15);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: .74rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: .06em;
+        }
+        .live-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 6px #22c55e;
+            animation: livePulse 1.2s ease-in-out infinite;
+        }
+        @keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
 
-video{
- width:100%;
- max-width:400px;
- border:3px solid #00ff99;
-}
+        /* ── Main wrap ── */
+        .scanner-wrap {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 460px;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
 
-</style>
+        /* ── Viewfinder ── */
+        .viewfinder {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            border-radius: 18px;
+            overflow: hidden;
+            background: #000;
+            border: 1px solid rgba(0,198,255,.3);
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,.05) inset,
+                0 0 60px rgba(0,198,255,.1),
+                0 12px 40px rgba(0,0,0,.6);
+        }
 
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Corner brackets */
+        .vf-corner {
+            position: absolute;
+            width: 32px; height: 32px;
+            border-color: #00c6ff;
+            border-style: solid;
+            border-width: 0;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .vf-corner--tl { top:14px; left:14px;  border-top-width:3px;  border-left-width:3px;  border-radius:6px 0 0 0; }
+        .vf-corner--tr { top:14px; right:14px;  border-top-width:3px;  border-right-width:3px; border-radius:0 6px 0 0; }
+        .vf-corner--bl { bottom:14px; left:14px;  border-bottom-width:3px; border-left-width:3px;  border-radius:0 0 0 6px; }
+        .vf-corner--br { bottom:14px; right:14px;  border-bottom-width:3px; border-right-width:3px; border-radius:0 0 6px 0; }
+
+        /* Scan laser line */
+        .scan-laser {
+            position: absolute;
+            left: 10%;
+            width: 80%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #ff4444, #ff6666, #ff4444, transparent);
+            box-shadow: 0 0 12px rgba(255,60,60,.8);
+            z-index: 3;
+            top: 50%;
+            animation: laserSweep 2.2s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes laserSweep {
+            0%,100% { top:20%; }
+            50%      { top:80%; }
+        }
+
+        /* Overlay when not active */
+        .vf-idle {
+            position: absolute;
+            inset: 0;
+            background: rgba(6,13,26,.75);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            z-index: 4;
+            transition: opacity .3s;
+        }
+        .vf-idle.hidden { opacity:0; pointer-events:none; }
+        .vf-idle-icon { font-size: 3rem; }
+        .vf-idle-text {
+            font-size: .9rem;
+            color: rgba(220,240,255,.6);
+            text-align: center;
+            font-weight: 600;
+        }
+
+        /* ── Status card ── */
+        .status-card {
+            width: 100%;
+            background: rgba(8,18,34,.88);
+            border: 1px solid rgba(0,198,255,.18);
+            border-radius: 16px;
+            padding: 18px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .status-card::before {
+            content: '';
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,198,255,.5), rgba(124,77,255,.4), transparent);
+        }
+
+        .status-label {
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .14em;
+            color: rgba(220,240,255,.4);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .status-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e8f4ff;
+            letter-spacing: .04em;
+            word-break: break-all;
+        }
+        .status-value.success { color: #22c55e; }
+        .status-value.error   { color: #f87171; }
+        .status-value.waiting { color: rgba(220,240,255,.4); }
+
+        /* scan count */
+        .scan-counter {
+            margin-top: 12px;
+            font-size: .82rem;
+            color: rgba(220,240,255,.35);
+            display: flex;
+            gap: 4px;
+        }
+        .scan-counter strong { color: #00c6ff; }
+
+        /* ── Buttons ── */
+        .btn-row {
+            width: 100%;
+            display: flex;
+            gap: 12px;
+        }
+        .btn-primary-scan {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #007bff, #00c6ff);
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: .85rem;
+            font-weight: 700;
+            letter-spacing: .06em;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0,123,255,.35);
+            transition: opacity .2s, transform .15s;
+        }
+        .btn-primary-scan:hover { opacity:.88; transform:translateY(-1px); }
+
+        .btn-stop {
+            padding: 14px 20px;
+            border: 1px solid rgba(220,53,69,.45);
+            border-radius: 12px;
+            background: rgba(220,53,69,.1);
+            color: #f87171;
+            font-family: 'Orbitron', sans-serif;
+            font-size: .82rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .2s, transform .15s;
+        }
+        .btn-stop:hover { background: rgba(220,53,69,.2); transform:translateY(-1px); }
+
+        /* camera select */
+        .cam-select-wrap {
+            width: 100%;
+        }
+        .cam-select-wrap label {
+            display: block;
+            font-size: .78rem;
+            font-weight: 600;
+            letter-spacing: .08em;
+            color: rgba(220,240,255,.4);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        #cameraSelect {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(0,198,255,.2);
+            border-radius: 10px;
+            color: #e8f4ff;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .92rem;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* back link */
+        .back-link {
+            color: rgba(0,198,255,.55);
+            font-size: .84rem;
+            font-weight: 600;
+            text-decoration: none;
+            letter-spacing: .04em;
+            margin-top: 4px;
+            transition: color .2s;
+        }
+        .back-link:hover { color: #00c6ff; }
+    </style>
 </head>
-
 <body>
 
-<h2>Scanner Running</h2>
+<div class="scanner-header">
+    <h1>🛒 Smart Trolley Scanner</h1>
+    <div class="live-badge">
+        <div class="live-dot"></div>
+        LIVE
+    </div>
+</div>
 
-<video id="video"></video>
+<div class="scanner-wrap">
 
-<h3 id="status">Waiting for barcode...</h3>
+    <!-- Viewfinder -->
+    <div class="viewfinder">
+        <video id="video" playsinline></video>
+        <div class="vf-corner vf-corner--tl"></div>
+        <div class="vf-corner vf-corner--tr"></div>
+        <div class="vf-corner vf-corner--bl"></div>
+        <div class="vf-corner vf-corner--br"></div>
+        <div class="scan-laser" id="scanLaser"></div>
+        <div class="vf-idle" id="vfIdle">
+            <div class="vf-idle-icon">📷</div>
+            <div class="vf-idle-text">Tap START SCANNING<br>to activate the camera</div>
+        </div>
+    </div>
+
+    <!-- Status -->
+    <div class="status-card">
+        <div class="status-label">Scan Status</div>
+        <div class="status-value waiting" id="statusText">Waiting for scan…</div>
+        <div class="scan-counter">Scans forwarded: <strong id="scanCount">0</strong></div>
+    </div>
+
+    <!-- Camera select -->
+    <div class="cam-select-wrap">
+        <label for="cameraSelect">Camera</label>
+        <select id="cameraSelect">
+            <option value="">— select camera —</option>
+        </select>
+    </div>
+
+    <!-- Buttons -->
+    <div class="btn-row">
+        <button class="btn-primary-scan" id="startBtn" onclick="startScanner()">
+            ▶ START SCANNING
+        </button>
+        <button class="btn-stop" id="stopBtn" onclick="stopScanner()" style="display:none">
+            ■ STOP
+        </button>
+    </div>
+
+    <a href="billing.html" class="back-link">← Back to Billing</a>
+
+</div>
 
 <script>
+    /* ── Supabase ── */
+    const supabaseUrl = "https://nqjuqjrafhurzkudqcbn.supabase.co";
+    const supabaseKey = "sb_publishable_v6cpkfut0eEAlapT0g5Ojw_3ZVa-U8w";   // ← keep original key
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-const supabaseUrl = "https://nqjuqjrafhurzkudqcbn.supabase.co";
-const supabaseKey = "sb_publishable_v6cpkfut0eEAlapT0g5Ojw_3ZVa-U8u";
+    /* ── State ── */
+    const codeReader  = new ZXing.BrowserMultiFormatReader();
+    let   isScanning  = false;
+    let   scanCount   = 0;
+    let   lastBarcode = "";
+    let   debounceTimer = null;
 
-const supabaseClient = window.supabase.createClient(supabaseUrl,supabaseKey);
+    const statusEl    = document.getElementById("statusText");
+    const countEl     = document.getElementById("scanCount");
+    const vfIdle      = document.getElementById("vfIdle");
+    const startBtn    = document.getElementById("startBtn");
+    const stopBtn     = document.getElementById("stopBtn");
 
-const codeReader = new ZXing.BrowserMultiFormatReader();
+    /* ── Populate camera list ── */
+    async function populateCameras() {
+        try {
+            const devices = await codeReader.listVideoInputDevices();
+            const select  = document.getElementById("cameraSelect");
+            devices.forEach(d => {
+                const opt = document.createElement("option");
+                opt.value = d.deviceId;
+                opt.text  = d.label || "Camera " + (select.options.length + 1);
+                select.appendChild(opt);
+            });
+            // Default: rear camera
+            const backCam = devices.find(d => /back|rear|environment/i.test(d.label));
+            if (backCam) select.value = backCam.deviceId;
+        } catch (e) {
+            console.warn("Camera list error:", e);
+        }
+    }
 
-const video = document.getElementById("video");
+    /* ── Send to Supabase ── */
+    async function sendBarcode(barcode) {
+        try {
+            const { error } = await supabaseClient
+                .from("scans")
+                .insert([{ barcode }]);
+            if (error) console.warn("Supabase insert error:", error.message);
+        } catch (e) {
+            console.warn("Supabase send failed:", e);
+        }
+    }
 
-async function sendBarcode(barcode){
+    /* ── Start scanner ── */
+    async function startScanner() {
+        if (isScanning) return;
+        isScanning = true;
 
- await supabaseClient
-  .from("scans")
-  .insert([{barcode:barcode}]);
+        startBtn.style.display = "none";
+        stopBtn.style.display  = "block";
+        vfIdle.classList.add("hidden");
 
-}
+        const selectedId = document.getElementById("cameraSelect").value || undefined;
 
-codeReader.decodeFromVideoDevice(null, video, async (result, err) => {
+        setStatus("Initializing camera…", "waiting");
 
- if(result){
+        try {
+            await codeReader.decodeFromVideoDevice(selectedId, "video", async (result, err) => {
+                if (!result) return;
 
-   const barcode = result.text;
+                const barcode = result.getText();
 
-   document.getElementById("status").innerText = "Captured: " + barcode;
+                // Debounce — same barcode within 1.5s is ignored
+                if (barcode === lastBarcode) return;
+                clearTimeout(debounceTimer);
+                lastBarcode = barcode;
+                debounceTimer = setTimeout(() => { lastBarcode = ""; }, 1500);
 
-   await sendBarcode(barcode);
+                scanCount++;
+                countEl.textContent = scanCount;
+                setStatus("Scanned: " + barcode, "success");
 
- }
+                await sendBarcode(barcode);
 
-});
+                // Brief flash
+                setTimeout(() => setStatus("Ready for next scan…", "waiting"), 1500);
+            });
 
+            setStatus("Point camera at barcode…", "waiting");
+
+        } catch (e) {
+            setStatus("Camera error: " + e.message, "error");
+            isScanning = false;
+            startBtn.style.display = "block";
+            stopBtn.style.display  = "none";
+            vfIdle.classList.remove("hidden");
+        }
+    }
+
+    /* ── Stop scanner ── */
+    function stopScanner() {
+        codeReader.reset();
+        isScanning = false;
+        startBtn.style.display = "block";
+        stopBtn.style.display  = "none";
+        vfIdle.classList.remove("hidden");
+        setStatus("Scanner stopped.", "waiting");
+    }
+
+    /* ── Status helper ── */
+    function setStatus(msg, type) {
+        statusEl.textContent = msg;
+        statusEl.className   = "status-value " + (type || "waiting");
+    }
+
+    /* ── Init ── */
+    populateCameras();
 </script>
-
 </body>
-
 </html>

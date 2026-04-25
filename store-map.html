@@ -2,12 +2,190 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Smart Trolley | Store Map</title>
+    <title>Store Map | Smart Trolley</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet" />
-</head>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet"/>
+    <style>
+        /* ── Map page layout ── */
+        .map-page {
+            max-width: 820px;
+            margin: 2.4rem auto;
+            padding: 0 1rem 2rem;
+        }
 
+        /* section card — matches about-section style */
+        .map-section {
+            background: rgba(14,22,40,.72);
+            border: 1px solid rgba(255,255,255,.10);
+            border-radius: 20px;
+            padding: clamp(1.4rem,4vw,2.2rem) clamp(1.4rem,5vw,2.6rem);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,.05) inset,
+                0 8px 32px rgba(0,0,0,.45),
+                0 0 60px rgba(0,198,255,.03);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        .map-section::before {
+            content: '';
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,198,255,.5), rgba(124,77,255,.4), transparent);
+            pointer-events: none;
+        }
+
+        /* section badge */
+        .section-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .14em;
+            color: rgba(232,244,255,.45);
+            text-transform: uppercase;
+            margin-bottom: .9rem;
+        }
+        .badge-dot-cyan { width:7px;height:7px;border-radius:50%;background:#00c6ff;box-shadow:0 0 6px #00c6ff;flex-shrink:0; }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1.3rem,3.5vw,1.9rem);
+            font-weight: 900;
+            letter-spacing: .04em;
+            background: linear-gradient(130deg, #00c6ff 0%, #a3d4ff 55%, #7c4dff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: .5rem;
+        }
+
+        .section-desc {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: clamp(.9rem,2vw,1.02rem);
+            line-height: 1.7;
+            color: rgba(232,244,255,.55);
+            margin-bottom: 1.4rem;
+        }
+
+        /* ── Map image ── */
+        .map-img-wrap {
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid rgba(0,198,255,.18);
+            box-shadow: 0 6px 30px rgba(0,0,0,.45);
+            background: rgba(0,0,0,.3);
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .map-img-wrap img {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            display: block;
+            transition: transform .4s ease;
+        }
+        .map-img-wrap img:hover { transform: scale(1.02); }
+
+        .map-img-placeholder {
+            padding: 40px;
+            text-align: center;
+            color: rgba(220,240,255,.35);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .9rem;
+        }
+
+        /* ── Category buttons ── */
+        .cat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: .85rem;
+            margin-top: 1.6rem;
+        }
+
+        .cat-btn {
+            padding: 12px 8px;
+            border-radius: 12px;
+            background: rgba(255,255,255,.03);
+            border: 1px solid rgba(0,198,255,.18);
+            color: rgba(220,240,255,.75);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .88rem;
+            font-weight: 700;
+            letter-spacing: .04em;
+            cursor: pointer;
+            text-align: center;
+            transition: background .22s, border-color .22s, color .22s, transform .18s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .cat-btn .cat-emoji { font-size: 1.4rem; line-height: 1; }
+        .cat-btn:hover {
+            background: rgba(0,198,255,.09);
+            border-color: rgba(0,198,255,.45);
+            color: #e8f4ff;
+            transform: translateY(-2px);
+        }
+        .cat-btn.active {
+            background: rgba(0,123,255,.18);
+            border-color: rgba(0,198,255,.6);
+            color: #00c6ff;
+            box-shadow: 0 0 18px rgba(0,198,255,.15);
+        }
+
+        /* ── Location legend ── */
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .6rem;
+            margin-top: 1.2rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: .82rem;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            color: rgba(220,240,255,.55);
+        }
+        .legend-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* ── Aisle info box ── */
+        .aisle-info {
+            margin-top: 1.2rem;
+            padding: 14px 18px;
+            background: rgba(0,198,255,.06);
+            border: 1px solid rgba(0,198,255,.2);
+            border-radius: 12px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .92rem;
+            color: rgba(220,240,255,.7);
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .aisle-info .aisle-icon { font-size: 1.4rem; flex-shrink: 0; }
+
+        @media (max-width: 520px) {
+            .cat-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+</head>
 <body>
 
     <div class="header">
@@ -20,53 +198,135 @@
         <a href="billing.html">Billing</a>
         <a href="contact.html">Contact Us</a>
         <a href="store-map.html" class="active">Store Map</a>
-        <a href="admin-login.html">Admin</a> 
-        <a href="staff-login.html">Staff</a>   
+        <a href="admin-login.html">Admin</a>
+        <a href="staff-login.html">Staff</a>
     </div>
 
-    <div class="map-container" style="margin-top: 32px;">
-        <img id="storeMap" src="images/store.png" alt="Store Map">
-    </div>
+    <div class="map-page">
 
-    <p class="map-info">
-        Select a category to view its section.
-    </p>
+        <!-- ── Map Section ─────────────────────────────── -->
+        <div class="map-section">
+            <div class="section-badge">
+                <span class="badge-dot-cyan"></span>
+                <span>STORE NAVIGATION</span>
+            </div>
+            <div class="section-title">Store Map</div>
+            <p class="section-desc">
+                Select a category below to see which aisle to head to.
+                Tap the map to zoom in on any section.
+            </p>
 
-    <div class="category-list">
-        <button onclick="changeMap('store')">Full Map</button>
-        <button onclick="changeMap('groceries')">Groceries</button>
-        <button onclick="changeMap('electronics')">Electronics</button>
-        <button onclick="changeMap('dairy')">Dairy</button>
-        <button onclick="changeMap('clothing')">Clothing</button>
+            <div class="map-img-wrap">
+                <img id="storeMap" src="images/store.png" alt="Store Map"
+                     onerror="this.style.display='none';document.getElementById('mapPlaceholder').style.display='block'">
+                <div class="map-img-placeholder" id="mapPlaceholder" style="display:none">
+                    🗺 Store map image not found.<br>
+                    Place <code>images/store.png</code> in the images folder.
+                </div>
+            </div>
+
+            <!-- aisle info -->
+            <div class="aisle-info" id="aisleInfo">
+                <span class="aisle-icon">📍</span>
+                <span id="aisleText">Select a category to see its location in the store.</span>
+            </div>
+
+            <!-- Legend -->
+            <div class="legend">
+                <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>Entrance / Exit</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#007bff"></span>Trolley Station</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>Billing Counter</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#e11d48"></span>Staff Help Desk</div>
+            </div>
+        </div>
+
+        <!-- ── Category Grid ───────────────────────────── -->
+        <div class="map-section">
+            <div class="section-badge">
+                <span class="badge-dot-cyan"></span>
+                <span>BROWSE BY CATEGORY</span>
+            </div>
+
+            <div class="cat-grid" id="catGrid">
+                <button class="cat-btn active" onclick="changeMap('store', 'Full Store', '🗺', 'You are viewing the full store layout. Select a category to narrow down.', this)">
+                    <span class="cat-emoji">🗺</span> Full Map
+                </button>
+                <button class="cat-btn" onclick="changeMap('groceries', 'Groceries', '🥦', 'Groceries are in Aisle A1–A3 near the main entrance (left side).', this)">
+                    <span class="cat-emoji">🥦</span> Groceries
+                </button>
+                <button class="cat-btn" onclick="changeMap('electronics', 'Electronics', '📱', 'Electronics section is in Aisle E1–E2 at the back-right of the store.', this)">
+                    <span class="cat-emoji">📱</span> Electronics
+                </button>
+                <button class="cat-btn" onclick="changeMap('dairy', 'Dairy', '🥛', 'Dairy & Refrigerated products are in the chilled aisle D1 near the back wall.', this)">
+                    <span class="cat-emoji">🥛</span> Dairy
+                </button>
+                <button class="cat-btn" onclick="changeMap('clothing', 'Clothing', '👕', 'Clothing is on the upper floor or in Section C at the far left.', this)">
+                    <span class="cat-emoji">👕</span> Clothing
+                </button>
+                <button class="cat-btn" onclick="changeMap('snacks', 'Snacks', '🍿', 'Snacks & Beverages are in Aisle B2–B4, centre of the store.', this)">
+                    <span class="cat-emoji">🍿</span> Snacks
+                </button>
+                <button class="cat-btn" onclick="changeMap('personal', 'Personal Care', '🧴', 'Personal care products are in Aisle P1 near the staff desk.', this)">
+                    <span class="cat-emoji">🧴</span> Personal Care
+                </button>
+                <button class="cat-btn" onclick="changeMap('bakery', 'Bakery', '🍞', 'Freshly baked goods are near the entrance, Aisle BK1.', this)">
+                    <span class="cat-emoji">🍞</span> Bakery
+                </button>
+                <button class="cat-btn" onclick="changeMap('billing', 'Billing', '💳', 'Billing counters are located at the front of the store near the exit.', this)">
+                    <span class="cat-emoji">💳</span> Billing
+                </button>
+            </div>
+        </div>
+
     </div>
 
     <div id="google_translate_element" style="display:none;"></div>
-
     <script>
     function googleTranslateElementInit() {
-    new google.translate.TranslateElement(
-        {pageLanguage: 'en', autoDisplay: false},
-        'google_translate_element'
-    );
+        new google.translate.TranslateElement(
+            {pageLanguage: 'en', autoDisplay: false},
+            'google_translate_element'
+        );
+    }
+    </script>
+    <script>
+        setInterval(function() {
+            const banner = document.querySelector(".goog-te-banner-frame");
+            if (banner) banner.style.display = "none";
+            document.body.style.top = "0px";
+        }, 500);
+    </script>
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <script>
+    function changeMap(section, name, emoji, info, btnEl) {
+        // swap image — gracefully falls back if file doesn't exist
+        const img = document.getElementById("storeMap");
+        const placeholder = document.getElementById("mapPlaceholder");
+        const src = "images/" + section + ".png";
+
+        img.src = src;
+        img.style.display = "block";
+        placeholder.style.display = "none";
+
+        img.onerror = function() {
+            // If section-specific image missing, keep the default map visible
+            img.src = "images/store.png";
+            img.onerror = function() {
+                img.style.display = "none";
+                placeholder.style.display = "block";
+            };
+        };
+
+        // Update aisle info
+        document.getElementById("aisleText").textContent = info;
+
+        // Toggle active state on buttons
+        document.querySelectorAll(".cat-btn").forEach(b => b.classList.remove("active"));
+        if (btnEl) btnEl.classList.add("active");
     }
     </script>
 
-    <script>
-
-        setInterval(function() {
-            const banner = document.querySelector(".goog-te-banner-frame");
-            if (banner) {
-                banner.style.display = "none";
-            }
-
-            document.body.style.top = "0px";
-        }, 500);
-        
-    </script>
-    
-    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
-    <script src="js/map.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

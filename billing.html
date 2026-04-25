@@ -6,6 +6,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="css/style.css">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+        <!-- ZXing barcode reader (for embedded scanner) -->
+        <script src="https://unpkg.com/@zxing/library@latest"></script>
         <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
         <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet" />
 
@@ -414,6 +416,328 @@
         }
         #walkthroughClose:hover { opacity: 0.88; transform: translateY(-1px); }
     </style>
+
+    <!-- === SCANNER START === -->
+    <style>
+        /* ── Scanner Modal Overlay ───────────────────────────── */
+        #scannerContainer {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(4, 10, 20, 0.96);
+            z-index: 2000;
+            align-items: flex-end;
+            justify-content: center;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+        #scannerContainer.open {
+            display: flex;
+        }
+
+        /* Bottom-sheet panel */
+        #scannerPanel {
+            background: #060d1a;
+            border-radius: 24px 24px 0 0;
+            width: 100%;
+            max-width: 500px;
+            max-height: 92vh;
+            overflow-y: auto;
+            padding: 20px 16px 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            position: relative;
+            border: 1px solid rgba(0,198,255,.18);
+            border-bottom: none;
+            box-shadow: 0 -8px 60px rgba(0,123,255,.2);
+            animation: scannerSlideUp 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes scannerSlideUp {
+            from { transform: translateY(40px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+
+        /* Modal handle bar */
+        #scannerPanel::before {
+            content: '';
+            width: 40px;
+            height: 4px;
+            background: rgba(0,198,255,.35);
+            border-radius: 2px;
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Close button (top-right) */
+        #scannerCloseBtn {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            background: rgba(255,255,255,.06);
+            border: 1px solid rgba(255,255,255,.12);
+            color: #7ab8d4;
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .2s, color .2s;
+            z-index: 5;
+        }
+        #scannerCloseBtn:hover { background: rgba(220,53,69,.25); color: #f87171; }
+
+        /* Panel title */
+        .sc-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: .95rem;
+            font-weight: 900;
+            color: #e8f4ff;
+            letter-spacing: .07em;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sc-live-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(34,197,94,.12);
+            border: 1px solid rgba(34,197,94,.3);
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: .68rem;
+            font-weight: 700;
+            color: #22c55e;
+            letter-spacing: .06em;
+        }
+        .sc-live-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 5px #22c55e;
+            animation: scLivePulse 1.2s ease-in-out infinite;
+        }
+        @keyframes scLivePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+
+        /* Viewfinder */
+        .sc-viewfinder {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #000;
+            border: 1px solid rgba(0,198,255,.25);
+            box-shadow: 0 0 40px rgba(0,198,255,.08), 0 10px 30px rgba(0,0,0,.5);
+        }
+        #scVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        /* Corner brackets */
+        .sc-corner {
+            position: absolute;
+            width: 28px; height: 28px;
+            border-color: #00c6ff;
+            border-style: solid;
+            border-width: 0;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .sc-corner--tl { top:12px;  left:12px;  border-top-width:3px;    border-left-width:3px;   border-radius:5px 0 0 0; }
+        .sc-corner--tr { top:12px;  right:12px; border-top-width:3px;    border-right-width:3px;  border-radius:0 5px 0 0; }
+        .sc-corner--bl { bottom:12px; left:12px;  border-bottom-width:3px; border-left-width:3px;   border-radius:0 0 0 5px; }
+        .sc-corner--br { bottom:12px; right:12px; border-bottom-width:3px; border-right-width:3px;  border-radius:0 0 5px 0; }
+        /* Laser */
+        .sc-laser {
+            position: absolute;
+            left: 10%; width: 80%; height: 2px;
+            background: linear-gradient(90deg, transparent, #ff4444, #ff6666, #ff4444, transparent);
+            box-shadow: 0 0 10px rgba(255,60,60,.8);
+            z-index: 3;
+            top: 50%;
+            animation: scLaserSweep 2.2s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes scLaserSweep { 0%,100%{top:20%} 50%{top:80%} }
+        /* Idle overlay */
+        .sc-idle {
+            position: absolute;
+            inset: 0;
+            background: rgba(6,13,26,.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            z-index: 4;
+            transition: opacity .3s;
+        }
+        .sc-idle.hidden { opacity: 0; pointer-events: none; }
+        .sc-idle-icon { font-size: 2.6rem; }
+        .sc-idle-text {
+            font-size: .84rem;
+            color: rgba(220,240,255,.55);
+            text-align: center;
+            font-weight: 600;
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        /* Status card */
+        .sc-status-card {
+            width: 100%;
+            background: rgba(8,18,34,.88);
+            border: 1px solid rgba(0,198,255,.16);
+            border-radius: 14px;
+            padding: 14px 18px;
+            position: relative;
+            overflow: hidden;
+        }
+        .sc-status-card::before {
+            content: '';
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,198,255,.45), rgba(124,77,255,.35), transparent);
+        }
+        .sc-status-label {
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: .13em;
+            color: rgba(220,240,255,.38);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            font-family: 'Rajdhani', sans-serif;
+        }
+        .sc-status-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: .9rem;
+            font-weight: 700;
+            color: #e8f4ff;
+            letter-spacing: .03em;
+            word-break: break-all;
+        }
+        .sc-status-value.success { color: #22c55e; }
+        .sc-status-value.error   { color: #f87171; }
+        .sc-status-value.waiting { color: rgba(220,240,255,.4); }
+        .sc-scan-counter {
+            margin-top: 10px;
+            font-size: .78rem;
+            color: rgba(220,240,255,.32);
+            display: flex;
+            gap: 4px;
+            font-family: 'Rajdhani', sans-serif;
+        }
+        .sc-scan-counter strong { color: #00c6ff; }
+
+        /* Camera select */
+        .sc-cam-wrap { width: 100%; }
+        .sc-cam-wrap label {
+            display: block;
+            font-size: .72rem;
+            font-weight: 600;
+            letter-spacing: .08em;
+            color: rgba(220,240,255,.38);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            font-family: 'Rajdhani', sans-serif;
+        }
+        #scCameraSelect {
+            width: 100%;
+            padding: 9px 12px;
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(0,198,255,.18);
+            border-radius: 10px;
+            color: #e8f4ff;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .88rem;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* Button row */
+        .sc-btn-row {
+            width: 100%;
+            display: flex;
+            gap: 10px;
+        }
+        .sc-btn-start {
+            flex: 1;
+            padding: 13px;
+            border: none;
+            border-radius: 11px;
+            background: linear-gradient(135deg, #007bff, #00c6ff);
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: .78rem;
+            font-weight: 700;
+            letter-spacing: .06em;
+            cursor: pointer;
+            box-shadow: 0 4px 18px rgba(0,123,255,.32);
+            transition: opacity .2s, transform .15s;
+        }
+        .sc-btn-start:hover { opacity: .88; transform: translateY(-1px); }
+        .sc-btn-stop {
+            padding: 13px 18px;
+            border: 1px solid rgba(220,53,69,.4);
+            border-radius: 11px;
+            background: rgba(220,53,69,.08);
+            color: #f87171;
+            font-family: 'Orbitron', sans-serif;
+            font-size: .76rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .2s, transform .15s;
+        }
+        .sc-btn-stop:hover { background: rgba(220,53,69,.18); transform: translateY(-1px); }
+
+        /* Trigger button in billing UI */
+        #openScannerBtn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 11px 22px;
+            background: linear-gradient(135deg, #007bff, #00c6ff);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: .78rem;
+            font-weight: 700;
+            letter-spacing: .06em;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0,123,255,.35);
+            transition: opacity .2s, transform .15s;
+            margin-top: 10px;
+            margin-bottom: 4px;
+        }
+        #openScannerBtn:hover { opacity: .88; transform: translateY(-1px); }
+        #openScannerBtn:active { transform: translateY(0); }
+
+        /* Responsive: on desktop make the panel narrower */
+        @media (min-width: 600px) {
+            #scannerPanel {
+                border-radius: 24px;
+                margin-bottom: 5vh;
+                max-height: 85vh;
+            }
+            #scannerContainer {
+                align-items: center;
+            }
+        }
+    </style>
+    <!-- === SCANNER END (styles) === -->
     </head>
     
 <body>
@@ -504,6 +828,12 @@
             Total: ₹0.00
         </div>
 
+        <!-- === SCANNER START (trigger button) === -->
+        <button id="openScannerBtn" type="button">
+            📷 Start Scan
+        </button>
+        <!-- === SCANNER END (trigger button) === -->
+
         <button id="checkoutBtn">Checkout</button>
 
 
@@ -556,6 +886,54 @@
     <div id="printArea"></div>
     
     <div id ="suggestionBox"></div>
+
+    <!-- === SCANNER START (modal HTML) === -->
+    <div id="scannerContainer" role="dialog" aria-modal="true" aria-label="Barcode Scanner">
+        <div id="scannerPanel">
+            <button id="scannerCloseBtn" aria-label="Close scanner">✕</button>
+
+            <div class="sc-title">
+                📷 Scanner
+                <div class="sc-live-badge"><div class="sc-live-dot"></div>LIVE</div>
+            </div>
+
+            <!-- Viewfinder -->
+            <div class="sc-viewfinder">
+                <video id="scVideo" playsinline></video>
+                <div class="sc-corner sc-corner--tl"></div>
+                <div class="sc-corner sc-corner--tr"></div>
+                <div class="sc-corner sc-corner--bl"></div>
+                <div class="sc-corner sc-corner--br"></div>
+                <div class="sc-laser"></div>
+                <div class="sc-idle" id="scIdle">
+                    <div class="sc-idle-icon">📷</div>
+                    <div class="sc-idle-text">Tap START SCANNING<br>to activate the camera</div>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div class="sc-status-card">
+                <div class="sc-status-label">Scan Status</div>
+                <div class="sc-status-value waiting" id="scStatusText">Waiting for scan…</div>
+                <div class="sc-scan-counter">Scans forwarded: <strong id="scScanCount">0</strong></div>
+            </div>
+
+            <!-- Camera select -->
+            <div class="sc-cam-wrap">
+                <label for="scCameraSelect">Camera</label>
+                <select id="scCameraSelect">
+                    <option value="">— select camera —</option>
+                </select>
+            </div>
+
+            <!-- Buttons -->
+            <div class="sc-btn-row">
+                <button class="sc-btn-start" id="scStartBtn" type="button">▶ START SCANNING</button>
+                <button class="sc-btn-stop"  id="scStopBtn"  type="button" style="display:none">■ STOP</button>
+            </div>
+        </div>
+    </div>
+    <!-- === SCANNER END (modal HTML) === -->
 
  
     <script>
@@ -1475,5 +1853,180 @@
 
     })();
     </script>
+
+    <!-- === SCANNER START (logic) === -->
+    <script>
+    (function () {
+        'use strict';
+
+        /* ── DOM refs ── */
+        const container  = document.getElementById('scannerContainer');
+        const openBtn    = document.getElementById('openScannerBtn');
+        const closeBtn   = document.getElementById('scannerCloseBtn');
+        const startBtn   = document.getElementById('scStartBtn');
+        const stopBtn    = document.getElementById('scStopBtn');
+        const statusEl   = document.getElementById('scStatusText');
+        const countEl    = document.getElementById('scScanCount');
+        const idleEl     = document.getElementById('scIdle');
+        const camSelect  = document.getElementById('scCameraSelect');
+
+        if (!container || !openBtn) return;  // guard: elements must exist
+
+        /* ── Scanner state ── */
+        let scCodeReader  = null;
+        let scIsScanning  = false;
+        let scScanCount   = 0;
+        let scLastBarcode = '';
+        let scDebounce    = null;
+        let scCamsLoaded  = false;
+
+        /* ── Supabase: reuse global client created by app.js, fallback to creating one ── */
+        function getSupabaseClient() {
+            if (typeof supabaseClient !== 'undefined') return supabaseClient;
+            // Fallback: create our own if app.js hasn't initialised yet
+            if (typeof window.supabase !== 'undefined') {
+                return window.supabase.createClient(
+                    'https://nqjuqjrafhurzkudqcbn.supabase.co',
+                    'sb_publishable_v6cpkfut0eEAlapT0g5Ojw_3ZVa-U8w'
+                );
+            }
+            return null;
+        }
+
+        /* ── Helpers ── */
+        function setScStatus(msg, type) {
+            statusEl.textContent = msg;
+            statusEl.className   = 'sc-status-value ' + (type || 'waiting');
+        }
+
+        /* ── Populate camera list (lazy — only on first open) ── */
+        async function populateCameras() {
+            if (scCamsLoaded) return;
+            scCamsLoaded = true;
+            try {
+                if (!scCodeReader) scCodeReader = new ZXing.BrowserMultiFormatReader();
+                const devices = await scCodeReader.listVideoInputDevices();
+                devices.forEach(d => {
+                    const opt   = document.createElement('option');
+                    opt.value   = d.deviceId;
+                    opt.text    = d.label || ('Camera ' + camSelect.options.length);
+                    camSelect.appendChild(opt);
+                });
+                const rear = devices.find(d => /back|rear|environment/i.test(d.label));
+                if (rear) camSelect.value = rear.deviceId;
+            } catch (e) {
+                console.warn('[Scanner] Camera list error:', e);
+            }
+        }
+
+        /* ── Send barcode to Supabase ── */
+        async function scSendBarcode(barcode) {
+            try {
+                const client = getSupabaseClient();
+                if (!client) return;
+                const { error } = await client.from('scans').insert([{ barcode }]);
+                if (error) console.warn('[Scanner] Supabase insert error:', error.message);
+            } catch (e) {
+                console.warn('[Scanner] Supabase send failed:', e);
+            }
+        }
+
+        /* ── Start scanning ── */
+        async function scStart() {
+            if (scIsScanning) return;
+            if (!scCodeReader) scCodeReader = new ZXing.BrowserMultiFormatReader();
+
+            scIsScanning = true;
+            startBtn.style.display = 'none';
+            stopBtn.style.display  = 'block';
+            idleEl.classList.add('hidden');
+            setScStatus('Initializing camera…', 'waiting');
+
+            const selectedId = camSelect.value || undefined;
+
+            try {
+                await scCodeReader.decodeFromVideoDevice(selectedId, 'scVideo', async (result) => {
+                    if (!result) return;
+                    const barcode = result.getText();
+
+                    // Debounce: ignore same barcode within 1.5 s
+                    if (barcode === scLastBarcode) return;
+                    clearTimeout(scDebounce);
+                    scLastBarcode = barcode;
+                    scDebounce = setTimeout(() => { scLastBarcode = ''; }, 1500);
+
+                    scScanCount++;
+                    countEl.textContent = scScanCount;
+                    setScStatus('Scanned: ' + barcode, 'success');
+
+                    await scSendBarcode(barcode);
+
+                    setTimeout(() => setScStatus('Ready for next scan…', 'waiting'), 1500);
+                });
+                setScStatus('Point camera at barcode…', 'waiting');
+            } catch (e) {
+                setScStatus('Camera error: ' + e.message, 'error');
+                scIsScanning = false;
+                startBtn.style.display = 'block';
+                stopBtn.style.display  = 'none';
+                idleEl.classList.remove('hidden');
+            }
+        }
+
+        /* ── Stop scanning ── */
+        function scStop() {
+            if (scCodeReader) {
+                try { scCodeReader.reset(); } catch (e) {}
+            }
+            scIsScanning = false;
+            startBtn.style.display = 'block';
+            stopBtn.style.display  = 'none';
+            idleEl.classList.remove('hidden');
+            setScStatus('Scanner stopped.', 'waiting');
+        }
+
+        /* ── Open modal ── */
+        function openScanner() {
+            container.classList.add('open');
+            document.body.style.overflow = 'hidden';
+            populateCameras();
+        }
+
+        /* ── Close modal ── */
+        function closeScanner() {
+            scStop();
+            container.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        /* ── Event bindings ── */
+        openBtn.addEventListener('click',    openScanner);
+        openBtn.addEventListener('touchend', e => { e.preventDefault(); openScanner(); });
+
+        closeBtn.addEventListener('click',    closeScanner);
+        closeBtn.addEventListener('touchend', e => { e.preventDefault(); closeScanner(); });
+
+        startBtn.addEventListener('click',    scStart);
+        startBtn.addEventListener('touchend', e => { e.preventDefault(); scStart(); });
+
+        stopBtn.addEventListener('click',    scStop);
+        stopBtn.addEventListener('touchend', e => { e.preventDefault(); scStop(); });
+
+        // Close on backdrop tap (outside panel)
+        container.addEventListener('click', e => {
+            if (e.target === container) closeScanner();
+        });
+
+        // Stop camera on page navigation / visibility change
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && scIsScanning) scStop();
+        });
+        window.addEventListener('beforeunload', () => {
+            if (scIsScanning) scStop();
+        });
+
+    })();
+    </script>
+    <!-- === SCANNER END (logic) === -->
 </body>
 </html>

@@ -1,79 +1,377 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Receipt</title>
+    <meta charset="UTF-8">
+    <title>Receipt | Smart Trolley</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet"/>
+    <style>
+        /* ── Screen styles ── */
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(160deg, #060d1a 0%, #0b1a30 50%, #071224 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+        }
 
-<style>
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0,198,255,.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,198,255,.04) 1px, transparent 1px);
+            background-size: 44px 44px;
+            pointer-events: none;
+        }
 
-body{
-font-family: monospace;
-width:220px;
-margin:0;
-padding:10px;
-}
+        .receipt-outer {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 420px;
+        }
 
-hr{
-border:0;
-border-top:1px dashed black;
-}
+        /* brand */
+        .receipt-brand {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .receipt-brand h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 900;
+            background: linear-gradient(90deg, #00c6ff, #7c4dff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .receipt-brand p {
+            font-size: .8rem;
+            color: rgba(220,240,255,.4);
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
 
-.center{
-text-align:center;
-}
+        /* card */
+        .receipt-card {
+            background: rgba(8,18,34,.92);
+            border: 1px solid rgba(0,198,255,.18);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,.04) inset,
+                0 0 80px rgba(0,198,255,.06),
+                0 20px 60px rgba(0,0,0,.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            position: relative;
+        }
+        .receipt-card::before {
+            content: '';
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,198,255,.5), rgba(124,77,255,.4), transparent);
+        }
 
-@media print{
-body{
-width:220px;
+        /* header strip */
+        .receipt-header {
+            background: linear-gradient(135deg, #007bff, #00c6ff);
+            padding: 18px 24px;
+            text-align: center;
+        }
+        .receipt-header h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: .1em;
+            color: #fff;
+        }
+        .receipt-header p {
+            font-size: .78rem;
+            color: rgba(255,255,255,.75);
+            margin-top: 3px;
+        }
 
-}
-}
+        /* meta row */
+        .receipt-meta {
+            padding: 16px 24px;
+            border-bottom: 1px dashed rgba(0,198,255,.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .receipt-meta span {
+            font-size: .82rem;
+            color: rgba(220,240,255,.55);
+            font-weight: 600;
+        }
+        .receipt-meta strong {
+            color: rgba(220,240,255,.85);
+        }
 
-</style>
+        /* items */
+        .receipt-items {
+            padding: 12px 24px;
+        }
+        .receipt-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 9px 0;
+            border-bottom: 1px solid rgba(255,255,255,.05);
+            gap: 8px;
+        }
+        .receipt-item:last-child { border-bottom: none; }
 
+        .item-name {
+            font-size: .92rem;
+            font-weight: 600;
+            color: #d4edf8;
+            flex: 1;
+        }
+        .item-qty {
+            font-size: .82rem;
+            color: rgba(220,240,255,.45);
+            white-space: nowrap;
+        }
+        .item-total {
+            font-size: .92rem;
+            font-weight: 700;
+            color: #22c55e;
+            white-space: nowrap;
+        }
+
+        /* totals */
+        .receipt-totals {
+            padding: 14px 24px;
+            border-top: 1px dashed rgba(0,198,255,.2);
+        }
+        .receipt-totals .row {
+            display: flex;
+            justify-content: space-between;
+            font-size: .88rem;
+            color: rgba(220,240,255,.6);
+            padding: 4px 0;
+        }
+        .receipt-totals .row.grand {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0,198,255,.2);
+            font-size: 1.15rem;
+            font-weight: 700;
+            font-family: 'Orbitron', sans-serif;
+            color: #22c55e;
+        }
+
+        /* payment badge */
+        .payment-badge {
+            margin: 0 24px 20px;
+            padding: 10px 16px;
+            background: rgba(0,198,255,.07);
+            border: 1px solid rgba(0,198,255,.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .payment-badge span { font-size: .84rem; color: rgba(220,240,255,.55); font-weight: 600; }
+        .payment-badge strong { font-size: .92rem; color: #00c6ff; font-weight: 700; }
+
+        /* footer */
+        .receipt-footer {
+            text-align: center;
+            padding: 14px 24px 20px;
+            border-top: 1px solid rgba(255,255,255,.05);
+        }
+        .receipt-footer p {
+            font-size: .82rem;
+            color: rgba(220,240,255,.35);
+            letter-spacing: .04em;
+        }
+
+        /* action buttons */
+        .receipt-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .receipt-actions button, .receipt-actions a {
+            flex: 1;
+            padding: 13px;
+            border-radius: 12px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: .8rem;
+            font-weight: 700;
+            letter-spacing: .06em;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: opacity .2s, transform .15s;
+            border: none;
+        }
+        .btn-print {
+            background: rgba(0,198,255,.1);
+            border: 1px solid rgba(0,198,255,.35) !important;
+            color: #00c6ff;
+        }
+        .btn-done {
+            background: linear-gradient(135deg, #007bff, #00c6ff);
+            color: #fff;
+            box-shadow: 0 4px 18px rgba(0,123,255,.35);
+        }
+        .receipt-actions button:hover, .receipt-actions a:hover {
+            opacity: .85;
+            transform: translateY(-1px);
+        }
+
+        /* ── PRINT styles — classic thermal receipt look ── */
+        @media print {
+            * { box-sizing: border-box; }
+            body {
+                background: #fff !important;
+                display: block;
+                padding: 0;
+                margin: 0;
+            }
+            body::before { display: none; }
+            .receipt-outer { max-width: 280px; margin: 0 auto; }
+            .receipt-brand, .receipt-actions { display: none !important; }
+            .receipt-card {
+                background: #fff !important;
+                border: none !important;
+                box-shadow: none !important;
+                border-radius: 0;
+                backdrop-filter: none;
+            }
+            .receipt-card::before { display: none; }
+            .receipt-header {
+                background: none !important;
+                border-bottom: 1px dashed #000;
+                padding: 8px 0;
+            }
+            .receipt-header h2, .receipt-header p { color: #000 !important; font-size: 11px; }
+            .receipt-meta { padding: 8px 0; }
+            .receipt-meta span, .receipt-meta strong { color: #000 !important; font-size: 10px; }
+            .receipt-items { padding: 4px 0; }
+            .item-name, .item-qty, .item-total { color: #000 !important; font-size: 10px; }
+            .receipt-totals { padding: 6px 0; }
+            .receipt-totals .row { color: #000 !important; font-size: 10px; }
+            .receipt-totals .row.grand { color: #000 !important; font-size: 12px; border-top: 1px dashed #000; }
+            .payment-badge { margin: 4px 0; padding: 4px 0; background: none; border: none; border-top: 1px dashed #000; }
+            .payment-badge span, .payment-badge strong { color: #000 !important; font-size: 10px; }
+            .receipt-footer { padding: 6px 0; border-top: 1px dashed #000; }
+            .receipt-footer p { color: #000 !important; font-size: 10px; }
+        }
+    </style>
 </head>
 <body>
+<div class="receipt-outer">
 
-<div id="receipt"></div>
+    <div class="receipt-brand">
+        <h1>🛒 Smart Trolley</h1>
+        <p>Payment Receipt</p>
+    </div>
+
+    <div class="receipt-card">
+
+        <div class="receipt-header">
+            <h2>SMART TROLLEY</h2>
+            <p id="receiptSubtitle">Your purchase summary</p>
+        </div>
+
+        <div class="receipt-meta">
+            <span>Bill ID: <strong id="rBillId">—</strong></span>
+            <span id="rDate">—</span>
+        </div>
+
+        <div class="receipt-items" id="rItems">
+            <!-- populated by JS -->
+        </div>
+
+        <div class="receipt-totals">
+            <div class="row"><span>Subtotal</span><span id="rSubtotal">₹0.00</span></div>
+            <div class="row">
+                <span>Payment</span>
+                <span id="rPaymentMode" style="color:#00c6ff">—</span>
+            </div>
+            <div class="row grand">
+                <span>TOTAL</span>
+                <span id="rTotal">₹0.00</span>
+            </div>
+        </div>
+
+        <div class="payment-badge">
+            <span>Payment Method</span>
+            <strong id="rBadgePayment">—</strong>
+        </div>
+
+        <div class="receipt-footer">
+            <p>Thank you for shopping with Smart Trolley!</p>
+            <p style="margin-top:4px">© 2026 Smart Trolley System</p>
+        </div>
+
+    </div>
+
+    <div class="receipt-actions">
+        <button class="btn-print" onclick="window.print()">🖨 Print</button>
+        <a href="billing.html" class="btn-done">✓ Done</a>
+    </div>
+
+</div>
 
 <script>
-
     const bill = JSON.parse(localStorage.getItem("currentBill"));
 
-    let html = `
-    <div class="center"><b>SMART TROLLEY</b></div>
-    <hr>
-    Bill: ${bill.billId}<br>
-    ${bill.date}
-    <hr>
-    `;
+    if (!bill) {
+        document.getElementById("rItems").innerHTML =
+            '<p style="text-align:center;color:rgba(220,240,255,.4);padding:20px">No receipt data found.</p>';
+    } else {
+        // Bill ID & date
+        document.getElementById("rBillId").textContent = bill.billId || "—";
 
-    bill.items.forEach(item=>{
-    html += `
-    ${item.name}<br>
-    ${item.quantity} x ₹${item.price} = ₹${item.total}<br>
-    `;
-    });
+        const d = new Date(bill.date);
+        const dateStr = isNaN(d) ? bill.date :
+            d.toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
+        document.getElementById("rDate").textContent = dateStr;
 
-    html += `
-    <hr>
-    <b>TOTAL: ₹${bill.total}</b><br>
-    PAYMENT: ${bill.paymentMode}
-    <hr>
-    Thank You
-    `;
+        // Items
+        const itemsEl = document.getElementById("rItems");
+        let subtotal  = 0;
+        itemsEl.innerHTML = bill.items.map(item => {
+            subtotal += item.total;
+            return `
+            <div class="receipt-item">
+                <div class="item-name">${item.name}</div>
+                <div class="item-qty">${item.quantity} × ₹${item.price.toFixed(2)}</div>
+                <div class="item-total">₹${item.total.toFixed(2)}</div>
+            </div>`;
+        }).join('');
 
-    document.getElementById("receipt").innerHTML = html;
+        // Totals
+        document.getElementById("rSubtotal").textContent       = "₹" + subtotal.toFixed(2);
+        document.getElementById("rTotal").textContent          = "₹" + (bill.total || subtotal).toFixed(2);
+        document.getElementById("rPaymentMode").textContent    = bill.paymentMode || "—";
+        document.getElementById("rBadgePayment").textContent   = bill.paymentMode || "—";
 
-    setTimeout(()=>{
-    window.print();
-    },500);
+        // Auto-print after short delay if navigated here by billing.html
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("autoprint") === "1") {
+            setTimeout(() => window.print(), 600);
+        }
+    }
 
-    window.onafterprint = function(){
-    localStorage.removeItem("currentBill");
-    window.location.href = "billing.html";
+    // After print, clean up and go back
+    window.onafterprint = function() {
+        localStorage.removeItem("currentBill");
+        window.location.href = "billing.html";
     };
-
 </script>
-
 </body>
 </html>

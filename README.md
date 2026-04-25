@@ -2,7 +2,7 @@
 
 A self-checkout web application built for retail stores to cut down billing queues and give customers a faster, smoother shopping experience.
 
-Live Demo → [smarttrolley05.netlify.app](https://smarttrolley05.netlify.app/)
+Live Demo → [smarttrolley40.netlify.app](https://smarttrolley40.netlify.app/)
 
 ---
 
